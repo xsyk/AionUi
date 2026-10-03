@@ -12,6 +12,7 @@ import {
   Info,
   Lightning,
   LinkCloud,
+  Peoples,
   Puzzle,
   Speed,
   System,
@@ -23,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Tooltip } from '@arco-design/web-react';
 import { getSiderTooltipProps } from '@/renderer/utils/ui/siderTooltip';
+import { useAuth } from '@/renderer/hooks/context/AuthContext';
 
 /** Builtin settings tab IDs in display order (must match router paths). */
 export const BUILTIN_TAB_IDS = [
@@ -37,6 +39,17 @@ export const BUILTIN_TAB_IDS = [
   'archived',
   'about',
 ] as const;
+
+/** Settings tab only the super admin sees; inserted before `webui`. */
+export const USER_MANAGEMENT_TAB_ID = 'users';
+
+/** Insert `item` before the `webui` tab (or append when absent). */
+export function insertBeforeWebui<T extends { id: string }>(items: T[], item: T): T[] {
+  const at = items.findIndex((entry) => entry.id === 'webui');
+  const next = [...items];
+  next.splice(at === -1 ? next.length : at, 0, item);
+  return next;
+}
 
 /**
  * Legacy anchor IDs that have been merged into other tabs.
@@ -78,6 +91,7 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const isDesktop = isElectronDesktop();
+  const isSuperAdmin = Boolean(useAuth().user?.is_super_admin);
 
   const extensionTabs = useExtensionSettingsTabs();
   const { resolveExtTabName } = useExtI18n();
@@ -123,7 +137,15 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
     };
 
     // Start with ordered builtin IDs, hiding desktop-only tabs in browser mode
-    const result: SiderItem[] = BUILTIN_TAB_IDS.filter((id) => isDesktop || id !== 'pet').map((id) => builtinMap[id]);
+    let result: SiderItem[] = BUILTIN_TAB_IDS.filter((id) => isDesktop || id !== 'pet').map((id) => builtinMap[id]);
+    if (isSuperAdmin) {
+      result = insertBeforeWebui(result, {
+        id: USER_MANAGEMENT_TAB_ID,
+        label: t('settings.userManagement.title'),
+        icon: <Peoples />,
+        path: USER_MANAGEMENT_TAB_ID,
+      });
+    }
 
     // Extension tabs with position anchoring
     const beforeMap = new Map<string, IExtensionSettingsTab[]>();
@@ -197,7 +219,7 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
     }
 
     return { menus: result, groupHeaderAt: headerAt };
-  }, [t, isDesktop, extensionTabs, resolveExtTabName]);
+  }, [t, isDesktop, isSuperAdmin, extensionTabs, resolveExtTabName]);
 
   const siderTooltipProps = getSiderTooltipProps(tooltipEnabled);
   return (

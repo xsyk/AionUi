@@ -10,6 +10,7 @@ import { useThemeContext } from '@renderer/hooks/context/ThemeContext';
 import { SiderToolbar, SiderSearchEntry, SiderScheduledEntry, SiderAssistantEntry } from './SiderNav';
 import SiderFooter from './SiderFooter';
 import TeamSiderSection from './TeamSiderSection';
+import OtherUsersSiderSection from '@renderer/pages/admin/OtherUsersSiderSection';
 import siderStyles from './Sider.module.css';
 
 const WorkspaceGroupedHistory = React.lazy(() => import('@renderer/pages/conversation/GroupedHistory'));
@@ -234,6 +235,11 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
                         collapsed={collapsed}
                         pathname={pathname}
                         siderTooltipProps={siderTooltipProps}
+                        onSessionClick={onSessionClick}
+                      />
+                      <OtherUsersSiderSection
+                        collapsed={collapsed}
+                        pathname={pathname}
                         onSessionClick={onSessionClick}
                       />
                     </>

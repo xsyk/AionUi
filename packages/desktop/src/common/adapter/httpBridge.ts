@@ -174,6 +174,39 @@ function redactForLog(value: unknown, depth = 0): unknown {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Act-as (super admin operating another user's conversation)
+// ---------------------------------------------------------------------------
+
+/** Header the backend reads to run a super-admin request as another user. */
+export const ACT_AS_HEADER = 'x-aionui-act-as';
+
+/**
+ * Paths that must always run as the real caller even while acting as someone
+ * else: the caller's own sider/order, admin endpoints (which reject act-as),
+ * and the auth/session endpoints.
+ */
+const ACT_AS_EXEMPT_PREFIXES = ['/api/sidebar', '/api/order', '/api/admin/', '/api/auth/'];
+const ACT_AS_EXEMPT_EXACT = new Set(['/login', '/logout']);
+
+let actAsUserId: string | null = null;
+
+/** Start (id) or stop (null) acting as another user for subsequent requests. */
+export function setActAsUser(userId: string | null): void {
+  actAsUserId = userId && userId.trim() ? userId.trim() : null;
+}
+
+export function getActAsUser(): string | null {
+  return actAsUserId;
+}
+
+/** Whether a request to `path` carries the act-as header while acting. */
+export function shouldAttachActAs(path: string): boolean {
+  const pathname = path.split('?')[0];
+  if (ACT_AS_EXEMPT_EXACT.has(pathname)) return false;
+  return !ACT_AS_EXEMPT_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+}
+
 const REFRESH_ENDPOINT = '/api/auth/refresh';
 
 /**
@@ -231,6 +264,10 @@ export async function httpRequest<T>(
 
   if (options?.headers) {
     Object.assign(headers, options.headers);
+  }
+
+  if (actAsUserId && shouldAttachActAs(path)) {
+    headers[ACT_AS_HEADER] = actAsUserId;
   }
 
   console.debug(

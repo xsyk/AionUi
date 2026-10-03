@@ -12,6 +12,8 @@ type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 export interface AuthUser {
   id: string;
   username: string;
+  /** Real caller is the built-in super admin (stays true while acting as someone). */
+  is_super_admin?: boolean;
 }
 
 interface LoginParams {

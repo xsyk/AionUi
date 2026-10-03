@@ -17,6 +17,7 @@ import {
   Info,
   Lightning,
   LinkCloud,
+  Peoples,
   Puzzle,
   Robot,
   System,
@@ -25,7 +26,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useExtI18n } from '@/renderer/hooks/system/useExtI18n';
-import { BUILTIN_TAB_IDS, LEGACY_ANCHOR_REMAP } from './SettingsSider';
+import { BUILTIN_TAB_IDS, LEGACY_ANCHOR_REMAP, USER_MANAGEMENT_TAB_ID, insertBeforeWebui } from './SettingsSider';
+import { useAuth } from '@/renderer/hooks/context/AuthContext';
 import './settings.css';
 
 interface SettingsPageWrapperProps {
@@ -38,7 +40,7 @@ type NavItem = { label: string; icon: React.ReactElement; path: string; id: stri
 
 type TranslateFn = (key: string, options?: { defaultValue?: string }) => string;
 
-export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn): NavItem[] {
+export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn, isSuperAdmin = false): NavItem[] {
   const builtinMap: Record<string, NavItem> = {
     model: { id: 'model', label: t('settings.model'), icon: <LinkCloud theme='outline' size='16' />, path: 'model' },
     assistants: {
@@ -88,7 +90,14 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn): 
     about: { id: 'about', label: t('settings.about'), icon: <Info theme='outline' size='16' />, path: 'about' },
   };
 
-  return BUILTIN_TAB_IDS.map((id) => builtinMap[id]);
+  const items = BUILTIN_TAB_IDS.map((id) => builtinMap[id]);
+  if (!isSuperAdmin) return items;
+  return insertBeforeWebui(items, {
+    id: USER_MANAGEMENT_TAB_ID,
+    label: t('settings.userManagement.title'),
+    icon: <Peoples theme='outline' size='16' />,
+    path: USER_MANAGEMENT_TAB_ID,
+  });
 }
 
 const SettingsPageWrapper: React.FC<SettingsPageWrapperProps> = ({ children, className, contentClassName }) => {
@@ -98,13 +107,14 @@ const SettingsPageWrapper: React.FC<SettingsPageWrapperProps> = ({ children, cla
   const { pathname } = useLocation();
   const { t } = useTranslation();
   const isDesktop = isElectronDesktop();
+  const isSuperAdmin = Boolean(useAuth().user?.is_super_admin);
 
   const extensionTabs = useExtensionSettingsTabs();
 
   const { resolveExtTabName } = useExtI18n();
 
   const menuItems = React.useMemo(() => {
-    const builtins = getBuiltinSettingsNavItems(isDesktop, t);
+    const builtins = getBuiltinSettingsNavItems(isDesktop, t, isSuperAdmin);
 
     // Insert extension tabs before system (unanchored default) or at anchor position
     const result = [...builtins];
@@ -161,7 +171,7 @@ const SettingsPageWrapper: React.FC<SettingsPageWrapperProps> = ({ children, cla
     }
 
     return result;
-  }, [isDesktop, t, extensionTabs, resolveExtTabName]);
+  }, [isDesktop, isSuperAdmin, t, extensionTabs, resolveExtTabName]);
 
   // Keep only horizontal padding on the scroll container — vertical padding is
   // moved to the content layer below. A sticky header inside a scroll container
