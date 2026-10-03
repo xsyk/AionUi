@@ -35,6 +35,8 @@ describe('shouldAttachActAs', () => {
     for (const path of [
       '/api/sidebar',
       '/api/sidebar/items?scope=x',
+      '/api/conversations',
+      '/api/conversations?limit=10000',
       '/api/order/sider/move',
       '/api/admin/users',
       '/api/admin/conversations?limit=10',

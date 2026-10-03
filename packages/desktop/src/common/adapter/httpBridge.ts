@@ -183,11 +183,13 @@ export const ACT_AS_HEADER = 'x-aionui-act-as';
 
 /**
  * Paths that must always run as the real caller even while acting as someone
- * else: the caller's own sider/order, admin endpoints (which reject act-as),
- * and the auth/session endpoints.
+ * else: the caller's own sider data (sider read model, ordering and the
+ * conversation list it syncs from), admin endpoints (which reject act-as), and
+ * the auth/session endpoints. Single-conversation paths
+ * (`/api/conversations/{id}/...`) are not exempt.
  */
 const ACT_AS_EXEMPT_PREFIXES = ['/api/sidebar', '/api/order', '/api/admin/', '/api/auth/'];
-const ACT_AS_EXEMPT_EXACT = new Set(['/login', '/logout']);
+const ACT_AS_EXEMPT_EXACT = new Set(['/login', '/logout', '/api/conversations']);
 
 let actAsUserId: string | null = null;
 
