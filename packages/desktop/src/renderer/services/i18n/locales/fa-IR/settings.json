@@ -1449,6 +1449,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "منبع",
+    "sourcePassword": "رمز عبور",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "ورود با Feishu",
+      "enabled": "فعال‌سازی ورود با Feishu",
+      "secretKept": "تنظیم شده است؛ برای حفظ آن خالی بگذارید",
+      "secretRequired": "App Secret را وارد کنید",
+      "publicBaseUrl": "نشانی سایت",
+      "publicBaseUrlHint": "نشانی‌ای که همکاران با آن به این سایت دسترسی دارند؛ برای ساخت نشانی بازگشت استفاده می‌شود",
+      "callbackUrl": "نشانی بازگشت (آن را به‌عنوان URL تغییر مسیر در پلتفرم باز Feishu اضافه کنید)",
+      "copy": "کپی",
+      "copied": "کپی شد",
+      "tenantKey": "سازمان مجاز",
+      "tenantUnlocked": "قفل نشده؛ سازمان نخستین کاربر Feishu به‌طور خودکار قفل می‌شود",
+      "clearTenant": "پاک کردن",
+      "advanced": "پیشرفته",
+      "apiBase": "نشانی API ‏Feishu",
+      "accountsBase": "نشانی صفحه مجوز Feishu",
+      "guide": "مراحل پیکربندی:\n1. در پلتفرم باز Feishu یک برنامه سفارشی سازمانی بسازید و App ID و App Secret را کپی کنید؛\n2. در تنظیمات امنیتی، نشانی بازگشت بالا را به‌عنوان URL تغییر مسیر اضافه کنید؛\n3. مجوز «دریافت اطلاعات پایه کاربر» را فعال کرده و یک نسخه منتشر کنید.",
+      "save": "ذخیره",
+      "saved": "ذخیره شد",
+      "saveFailed": "ذخیره ناموفق بود",
+      "loadFailed": "بارگذاری تنظیمات ورود با Feishu ناموفق بود"
+    }
   }
 }

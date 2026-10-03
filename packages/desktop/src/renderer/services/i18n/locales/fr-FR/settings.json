@@ -1449,6 +1449,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "Source",
+    "sourcePassword": "Mot de passe",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Connexion Feishu",
+      "enabled": "Activer la connexion Feishu",
+      "secretKept": "Déjà défini ; laisser vide pour le conserver",
+      "secretRequired": "Saisissez l'App Secret",
+      "publicBaseUrl": "URL du site",
+      "publicBaseUrlHint": "L'adresse utilisée par vos collègues pour accéder au site ; sert à construire l'URL de rappel",
+      "callbackUrl": "URL de rappel (à ajouter comme URL de redirection dans la plateforme ouverte Feishu)",
+      "copy": "Copier",
+      "copied": "Copié",
+      "tenantKey": "Organisation autorisée",
+      "tenantUnlocked": "Non verrouillée ; l'organisation du premier utilisateur Feishu sera verrouillée",
+      "clearTenant": "Effacer",
+      "advanced": "Avancé",
+      "apiBase": "URL de l'API Feishu",
+      "accountsBase": "URL d'autorisation Feishu",
+      "guide": "Configuration :\n1. Créez une application d'entreprise personnalisée dans la plateforme ouverte Feishu et copiez son App ID et son App Secret ;\n2. Dans les paramètres de sécurité, ajoutez l'URL de rappel ci-dessus comme URL de redirection ;\n3. Accordez l'autorisation « Obtenir les informations de base de l'utilisateur » et publiez une version.",
+      "save": "Enregistrer",
+      "saved": "Enregistré",
+      "saveFailed": "Échec de l'enregistrement",
+      "loadFailed": "Impossible de charger les paramètres de connexion Feishu"
+    }
   }
 }

@@ -1451,6 +1451,31 @@
     "otherUsers": "其他使用者",
     "deletedSuffix": "（已刪除）",
     "actingAs": "正在以 {{username}} 的身分檢視與對話",
-    "actAsUnavailable": "{{username}} 已無法使用，無法開啟此對話。"
+    "actAsUnavailable": "{{username}} 已無法使用，無法開啟此對話。",
+    "source": "來源",
+    "sourcePassword": "密碼",
+    "sourceFeishu": "飛書",
+    "feishu": {
+      "title": "飛書登入",
+      "enabled": "啟用飛書登入",
+      "secretKept": "已設定，留空則不修改",
+      "secretRequired": "請輸入 App Secret",
+      "publicBaseUrl": "網站位址",
+      "publicBaseUrlHint": "同事存取本系統使用的位址，用來產生回呼位址",
+      "callbackUrl": "回呼位址（填入飛書開放平台的重新導向 URL）",
+      "copy": "複製",
+      "copied": "已複製",
+      "tenantKey": "允許登入的企業",
+      "tenantUnlocked": "未鎖定，首位飛書登入者的企業將被自動鎖定",
+      "clearTenant": "清除",
+      "advanced": "進階設定",
+      "apiBase": "飛書 API 位址",
+      "accountsBase": "飛書授權頁位址",
+      "guide": "設定步驟：\n1. 在飛書開放平台建立企業自建應用，複製 App ID 和 App Secret；\n2. 在「安全設定」中將上方的回呼位址加入重新導向 URL；\n3. 開通「取得使用者基本資訊」權限並發布應用版本。",
+      "save": "儲存",
+      "saved": "已儲存",
+      "saveFailed": "儲存失敗",
+      "loadFailed": "讀取飛書登入設定失敗"
+    }
   }
 }

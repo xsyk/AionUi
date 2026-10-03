@@ -1449,6 +1449,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "Source",
+    "sourcePassword": "Password",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Feishu login",
+      "enabled": "Enable Feishu login",
+      "secretKept": "Already set; leave blank to keep",
+      "secretRequired": "Enter the App Secret",
+      "publicBaseUrl": "Site URL",
+      "publicBaseUrlHint": "The address colleagues use to reach this site; used to build the callback URL",
+      "callbackUrl": "Callback URL (add it as a redirect URL in the Feishu open platform)",
+      "copy": "Copy",
+      "copied": "Copied",
+      "tenantKey": "Allowed organization",
+      "tenantUnlocked": "Not locked; the first Feishu user's organization will be locked in",
+      "clearTenant": "Clear",
+      "advanced": "Advanced",
+      "apiBase": "Feishu API URL",
+      "accountsBase": "Feishu authorization URL",
+      "guide": "Setup:\n1. Create a custom enterprise app in the Feishu open platform and copy its App ID and App Secret;\n2. Under Security Settings, add the callback URL above as a redirect URL;\n3. Grant the \"Obtain basic user information\" permission and publish a version.",
+      "save": "Save",
+      "saved": "Saved",
+      "saveFailed": "Save failed",
+      "loadFailed": "Failed to load Feishu login settings"
+    }
   }
 }

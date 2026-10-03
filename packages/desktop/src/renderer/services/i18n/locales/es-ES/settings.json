@@ -1449,6 +1449,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "Origen",
+    "sourcePassword": "Contraseña",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Inicio de sesión con Feishu",
+      "enabled": "Activar inicio de sesión con Feishu",
+      "secretKept": "Ya configurado; déjalo vacío para conservarlo",
+      "secretRequired": "Introduce el App Secret",
+      "publicBaseUrl": "URL del sitio",
+      "publicBaseUrlHint": "La dirección con la que los compañeros acceden a este sitio; se usa para generar la URL de retorno",
+      "callbackUrl": "URL de retorno (añádela como URL de redirección en la plataforma abierta de Feishu)",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "tenantKey": "Organización permitida",
+      "tenantUnlocked": "Sin bloquear; se bloqueará la organización del primer usuario de Feishu",
+      "clearTenant": "Borrar",
+      "advanced": "Avanzado",
+      "apiBase": "URL de la API de Feishu",
+      "accountsBase": "URL de autorización de Feishu",
+      "guide": "Configuración:\n1. Crea una aplicación empresarial personalizada en la plataforma abierta de Feishu y copia su App ID y App Secret;\n2. En Configuración de seguridad, añade la URL de retorno anterior como URL de redirección;\n3. Concede el permiso «Obtener información básica del usuario» y publica una versión.",
+      "save": "Guardar",
+      "saved": "Guardado",
+      "saveFailed": "Error al guardar",
+      "loadFailed": "No se pudo cargar la configuración de Feishu"
+    }
   }
 }

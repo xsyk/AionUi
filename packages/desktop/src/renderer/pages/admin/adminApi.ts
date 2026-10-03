@@ -19,6 +19,7 @@ export type AdminUser = {
   created_at: number;
   last_login: number | null;
   is_super_admin: boolean;
+  source: 'password' | 'feishu';
 };
 
 export type AdminConversation = {
@@ -29,6 +30,42 @@ export type AdminConversation = {
   updated_at: number;
   owner: { id: string; username: string; deleted: boolean };
 };
+
+export type FeishuLoginConfig = {
+  enabled: boolean;
+  app_id: string;
+  app_secret_set: boolean;
+  tenant_key: string | null;
+  public_base_url: string;
+  api_base: string | null;
+  accounts_base: string | null;
+  callback_url: string;
+};
+
+export type FeishuLoginForm = {
+  enabled: boolean;
+  app_id: string;
+  app_secret: string;
+  public_base_url: string;
+  api_base: string;
+  accounts_base: string;
+};
+
+const blankToNull = (value: string) => (value.trim() ? value.trim() : null);
+
+/** PUT body for `/api/admin/feishu-login`; a blank secret is omitted so the stored one is kept. */
+export function buildFeishuConfigPayload(form: FeishuLoginForm, clearTenantKey: boolean): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    enabled: form.enabled,
+    app_id: form.app_id.trim(),
+    public_base_url: form.public_base_url.trim(),
+    api_base: blankToNull(form.api_base),
+    accounts_base: blankToNull(form.accounts_base),
+    clear_tenant_key: clearTenantKey,
+  };
+  if (form.app_secret.trim()) payload.app_secret = form.app_secret.trim();
+  return payload;
+}
 
 const enc = encodeURIComponent;
 
@@ -41,6 +78,9 @@ export const adminApi = {
   disableUser: (id: string) => httpRequest<AdminUser>('POST', `/api/admin/users/${enc(id)}/disable`),
   enableUser: (id: string) => httpRequest<AdminUser>('POST', `/api/admin/users/${enc(id)}/enable`),
   deleteUser: (id: string) => httpRequest<void>('DELETE', `/api/admin/users/${enc(id)}`),
+  getFeishuLogin: () => httpRequest<FeishuLoginConfig>('GET', '/api/admin/feishu-login'),
+  saveFeishuLogin: (payload: Record<string, unknown>) =>
+    httpRequest<FeishuLoginConfig>('PUT', '/api/admin/feishu-login', payload),
   listAllConversations: (limit = 500) =>
     httpRequest<AdminConversation[]>('GET', `/api/admin/conversations?limit=${limit}`),
 };

@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 import { adminApi } from './adminApi';
+import FeishuLoginCard from './FeishuLoginCard';
 import type { AdminUser } from './adminApi';
 import { BackendHttpError } from '@/common/adapter/httpBridge';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
@@ -126,6 +127,16 @@ const UserSettings: React.FC = () => {
         ),
     },
     {
+      title: t('settings.userManagement.source'),
+      dataIndex: 'source',
+      render: (_: unknown, row) =>
+        row.source === 'feishu' ? (
+          <Tag color='purple'>{t('settings.userManagement.sourceFeishu')}</Tag>
+        ) : (
+          <Tag>{t('settings.userManagement.sourcePassword')}</Tag>
+        ),
+    },
+    {
       title: t('settings.userManagement.createdAt'),
       dataIndex: 'created_at',
       render: (_: unknown, row) => formatTime(row.created_at, never),
@@ -176,6 +187,7 @@ const UserSettings: React.FC = () => {
   return (
     <SettingsPageWrapper>
       <div className='flex flex-col gap-16px' data-testid='user-management'>
+        <FeishuLoginCard />
         <div className='flex items-center justify-between'>
           <div>
             <div className='text-16px font-600 text-t-primary'>{t('settings.userManagement.title')}</div>

@@ -1451,6 +1451,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "출처",
+    "sourcePassword": "비밀번호",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Feishu 로그인",
+      "enabled": "Feishu 로그인 사용",
+      "secretKept": "설정됨. 비워 두면 변경하지 않습니다",
+      "secretRequired": "App Secret을 입력하세요",
+      "publicBaseUrl": "사이트 URL",
+      "publicBaseUrlHint": "동료가 이 사이트에 접속하는 주소로, 콜백 URL 생성에 사용됩니다",
+      "callbackUrl": "콜백 URL(Feishu 오픈 플랫폼의 리디렉션 URL에 추가)",
+      "copy": "복사",
+      "copied": "복사됨",
+      "tenantKey": "로그인 허용 조직",
+      "tenantUnlocked": "잠기지 않음. 처음 Feishu로 로그인한 사용자의 조직이 자동으로 잠깁니다",
+      "clearTenant": "지우기",
+      "advanced": "고급 설정",
+      "apiBase": "Feishu API URL",
+      "accountsBase": "Feishu 인증 페이지 URL",
+      "guide": "설정 단계:\n1. Feishu 오픈 플랫폼에서 기업용 사용자 지정 앱을 만들고 App ID와 App Secret을 복사합니다;\n2. 보안 설정에서 위의 콜백 URL을 리디렉션 URL로 추가합니다;\n3. \"사용자 기본 정보 가져오기\" 권한을 부여하고 버전을 게시합니다.",
+      "save": "저장",
+      "saved": "저장됨",
+      "saveFailed": "저장 실패",
+      "loadFailed": "Feishu 로그인 설정을 불러오지 못했습니다"
+    }
   }
 }

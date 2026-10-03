@@ -1450,6 +1450,31 @@
     "otherUsers": "其他用户",
     "deletedSuffix": "（已删除）",
     "actingAs": "正在以 {{username}} 的身份查看和对话",
-    "actAsUnavailable": "{{username}} 已不可用，无法打开该会话。"
+    "actAsUnavailable": "{{username}} 已不可用，无法打开该会话。",
+    "source": "来源",
+    "sourcePassword": "密码",
+    "sourceFeishu": "飞书",
+    "feishu": {
+      "title": "飞书登录",
+      "enabled": "启用飞书登录",
+      "secretKept": "已设置，留空则不修改",
+      "secretRequired": "请输入 App Secret",
+      "publicBaseUrl": "站点地址",
+      "publicBaseUrlHint": "同事访问本系统用的地址，用来生成回调地址",
+      "callbackUrl": "回调地址（填到飞书开放平台的重定向 URL）",
+      "copy": "复制",
+      "copied": "已复制",
+      "tenantKey": "允许登录的企业",
+      "tenantUnlocked": "未锁定，首个飞书登录者的企业将被自动锁定",
+      "clearTenant": "清除",
+      "advanced": "高级设置",
+      "apiBase": "飞书接口地址",
+      "accountsBase": "飞书授权页地址",
+      "guide": "配置步骤：\n1. 在飞书开放平台创建企业自建应用，复制 App ID 和 App Secret；\n2. 在「安全设置」中把上面的回调地址加入重定向 URL；\n3. 开通「获取用户基本信息」权限并发布应用版本。",
+      "save": "保存",
+      "saved": "已保存",
+      "saveFailed": "保存失败",
+      "loadFailed": "读取飞书登录配置失败"
+    }
   }
 }

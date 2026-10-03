@@ -1449,6 +1449,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "Quelle",
+    "sourcePassword": "Passwort",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Feishu-Anmeldung",
+      "enabled": "Feishu-Anmeldung aktivieren",
+      "secretKept": "Bereits festgelegt; leer lassen, um es zu behalten",
+      "secretRequired": "App Secret eingeben",
+      "publicBaseUrl": "Website-URL",
+      "publicBaseUrlHint": "Die Adresse, über die Kollegen diese Website erreichen; daraus wird die Callback-URL gebildet",
+      "callbackUrl": "Callback-URL (als Weiterleitungs-URL in der Feishu Open Platform eintragen)",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "tenantKey": "Zugelassene Organisation",
+      "tenantUnlocked": "Nicht festgelegt; die Organisation des ersten Feishu-Nutzers wird automatisch festgelegt",
+      "clearTenant": "Löschen",
+      "advanced": "Erweitert",
+      "apiBase": "Feishu-API-URL",
+      "accountsBase": "Feishu-Autorisierungs-URL",
+      "guide": "Einrichtung:\n1. Erstellen Sie in der Feishu Open Platform eine benutzerdefinierte Unternehmens-App und kopieren Sie App ID und App Secret;\n2. Fügen Sie unter „Sicherheitseinstellungen\" die obige Callback-URL als Weiterleitungs-URL hinzu;\n3. Erteilen Sie die Berechtigung „Grundlegende Benutzerinformationen abrufen\" und veröffentlichen Sie eine Version.",
+      "save": "Speichern",
+      "saved": "Gespeichert",
+      "saveFailed": "Speichern fehlgeschlagen",
+      "loadFailed": "Feishu-Anmeldeeinstellungen konnten nicht geladen werden"
+    }
   }
 }

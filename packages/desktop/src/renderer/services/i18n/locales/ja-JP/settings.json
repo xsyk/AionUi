@@ -1451,6 +1451,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "ソース",
+    "sourcePassword": "パスワード",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Feishu ログイン",
+      "enabled": "Feishu ログインを有効にする",
+      "secretKept": "設定済み。空欄のままなら変更しません",
+      "secretRequired": "App Secret を入力してください",
+      "publicBaseUrl": "サイト URL",
+      "publicBaseUrlHint": "同僚がこのサイトにアクセスするアドレス。コールバック URL の生成に使います",
+      "callbackUrl": "コールバック URL（Feishu オープンプラットフォームのリダイレクト URL に追加）",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "tenantKey": "ログインを許可する組織",
+      "tenantUnlocked": "未固定。最初に Feishu でログインしたユーザーの組織が自動的に固定されます",
+      "clearTenant": "クリア",
+      "advanced": "詳細設定",
+      "apiBase": "Feishu API URL",
+      "accountsBase": "Feishu 認可ページ URL",
+      "guide": "設定手順：\n1. Feishu オープンプラットフォームで企業向けカスタムアプリを作成し、App ID と App Secret をコピーします；\n2. 「セキュリティ設定」で上記のコールバック URL をリダイレクト URL に追加します；\n3. 「ユーザー基本情報の取得」権限を付与し、バージョンを公開します。",
+      "save": "保存",
+      "saved": "保存しました",
+      "saveFailed": "保存に失敗しました",
+      "loadFailed": "Feishu ログイン設定の読み込みに失敗しました"
+    }
   }
 }

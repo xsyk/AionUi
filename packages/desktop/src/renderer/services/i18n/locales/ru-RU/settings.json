@@ -1463,6 +1463,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "Источник",
+    "sourcePassword": "Пароль",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Вход через Feishu",
+      "enabled": "Включить вход через Feishu",
+      "secretKept": "Уже задан; оставьте пустым, чтобы сохранить",
+      "secretRequired": "Введите App Secret",
+      "publicBaseUrl": "Адрес сайта",
+      "publicBaseUrlHint": "Адрес, по которому коллеги открывают сайт; используется для формирования адреса обратного вызова",
+      "callbackUrl": "Адрес обратного вызова (добавьте его как URL перенаправления на открытой платформе Feishu)",
+      "copy": "Копировать",
+      "copied": "Скопировано",
+      "tenantKey": "Разрешённая организация",
+      "tenantUnlocked": "Не закреплена; организация первого пользователя Feishu будет закреплена автоматически",
+      "clearTenant": "Сбросить",
+      "advanced": "Дополнительно",
+      "apiBase": "Адрес API Feishu",
+      "accountsBase": "Адрес страницы авторизации Feishu",
+      "guide": "Настройка:\n1. Создайте корпоративное приложение на открытой платформе Feishu и скопируйте App ID и App Secret;\n2. В настройках безопасности добавьте указанный выше адрес обратного вызова как URL перенаправления;\n3. Выдайте разрешение «Получение основных сведений о пользователе» и опубликуйте версию.",
+      "save": "Сохранить",
+      "saved": "Сохранено",
+      "saveFailed": "Не удалось сохранить",
+      "loadFailed": "Не удалось загрузить настройки входа через Feishu"
+    }
   }
 }

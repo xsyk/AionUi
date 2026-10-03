@@ -1449,6 +1449,31 @@
     "otherUsers": "Other Users",
     "deletedSuffix": "(deleted)",
     "actingAs": "Viewing and chatting as {{username}}",
-    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened."
+    "actAsUnavailable": "{{username}} is no longer available, so this conversation cannot be opened.",
+    "source": "Kaynak",
+    "sourcePassword": "Parola",
+    "sourceFeishu": "Feishu",
+    "feishu": {
+      "title": "Feishu ile giriş",
+      "enabled": "Feishu ile girişi etkinleştir",
+      "secretKept": "Zaten ayarlı; korumak için boş bırakın",
+      "secretRequired": "App Secret girin",
+      "publicBaseUrl": "Site adresi",
+      "publicBaseUrlHint": "İş arkadaşlarınızın bu siteye eriştiği adres; geri çağırma adresini oluşturmak için kullanılır",
+      "callbackUrl": "Geri çağırma adresi (Feishu açık platformunda yönlendirme URL'si olarak ekleyin)",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "tenantKey": "İzin verilen kuruluş",
+      "tenantUnlocked": "Kilitli değil; ilk Feishu kullanıcısının kuruluşu otomatik olarak kilitlenir",
+      "clearTenant": "Temizle",
+      "advanced": "Gelişmiş",
+      "apiBase": "Feishu API adresi",
+      "accountsBase": "Feishu yetkilendirme adresi",
+      "guide": "Kurulum:\n1. Feishu açık platformunda kurumsal özel uygulama oluşturun ve App ID ile App Secret değerlerini kopyalayın;\n2. Güvenlik Ayarları'nda yukarıdaki geri çağırma adresini yönlendirme URL'si olarak ekleyin;\n3. \"Temel kullanıcı bilgilerini al\" iznini verin ve bir sürüm yayımlayın.",
+      "save": "Kaydet",
+      "saved": "Kaydedildi",
+      "saveFailed": "Kaydedilemedi",
+      "loadFailed": "Feishu giriş ayarları yüklenemedi"
+    }
   }
 }
