@@ -22,5 +22,19 @@
     "networkError": "连接失败，请稍后重试",
     "serverError": "服务器开小差了，请稍后重试",
     "unknown": "登录失败，请稍后再试"
+  },
+  "feishu": {
+    "or": "或",
+    "button": "使用飞书登录",
+    "errors": {
+      "disabled": "飞书登录未启用",
+      "state": "飞书登录已失效，请重新点击飞书登录",
+      "cancelled": "已取消飞书授权",
+      "tenant": "你不在允许登录的企业内",
+      "account_disabled": "账号已被停用，请联系管理员",
+      "upstream": "飞书服务暂时不可用，请稍后重试",
+      "server": "服务器开小差了，请稍后重试",
+      "unknown": "飞书登录失败，请稍后再试"
+    }
   }
 }

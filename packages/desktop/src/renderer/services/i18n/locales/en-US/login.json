@@ -22,5 +22,19 @@
     "networkError": "Connection failed, please try again",
     "serverError": "Server error, please try again later",
     "unknown": "Sign-in failed, please try again"
+  },
+  "feishu": {
+    "or": "or",
+    "button": "Sign in with Feishu",
+    "errors": {
+      "disabled": "Feishu login is not enabled",
+      "state": "The Feishu sign-in expired. Please click Sign in with Feishu again",
+      "cancelled": "Feishu authorization was cancelled",
+      "tenant": "Your organization is not allowed to sign in",
+      "account_disabled": "This account is disabled. Please contact the administrator",
+      "upstream": "Feishu is temporarily unavailable. Please try again later",
+      "server": "Server error. Please try again later",
+      "unknown": "Feishu sign-in failed. Please try again later"
+    }
   }
 }

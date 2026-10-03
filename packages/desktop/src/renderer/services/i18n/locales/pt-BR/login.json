@@ -22,5 +22,19 @@
     "networkError": "Falha na conexão, por favor tente novamente",
     "serverError": "Erro no servidor, por favor tente novamente mais tarde",
     "unknown": "O login falhou, por favor tente novamente"
+  },
+  "feishu": {
+    "or": "ou",
+    "button": "Entrar com Feishu",
+    "errors": {
+      "disabled": "O login com Feishu não está ativado",
+      "state": "O login com Feishu expirou. Clique em Entrar com Feishu novamente",
+      "cancelled": "A autorização do Feishu foi cancelada",
+      "tenant": "Sua organização não tem permissão para entrar",
+      "account_disabled": "Esta conta está desativada. Contate o administrador",
+      "upstream": "O Feishu está temporariamente indisponível. Tente novamente mais tarde",
+      "server": "Erro no servidor. Tente novamente mais tarde",
+      "unknown": "Falha no login com Feishu. Tente novamente mais tarde"
+    }
   }
 }

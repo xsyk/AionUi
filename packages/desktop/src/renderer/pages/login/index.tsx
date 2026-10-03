@@ -2,9 +2,11 @@ import loginLogo from '@renderer/assets/logos/brand/app.png';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '@/renderer/services/i18n';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppLoader from '@renderer/components/layout/AppLoader';
 import { useAuth } from '../../hooks/context/AuthContext';
+import FeishuLoginButton from './FeishuLoginButton';
+import { feishuErrorKey } from './feishuLogin';
 import './LoginPage.css';
 
 type MessageState = {
@@ -35,6 +37,7 @@ const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { status, login } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -105,6 +108,16 @@ const LoginPage: React.FC = () => {
     },
     [clearMessageLater]
   );
+
+  // The Feishu callback redirects back here with `?feishu_error=<code>` on failure.
+  useEffect(() => {
+    const key = feishuErrorKey(searchParams.get('feishu_error'));
+    if (!key) return;
+    showMessage({ type: 'error', text: t(key) });
+    const next = new URLSearchParams(searchParams);
+    next.delete('feishu_error');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, showMessage, t]);
 
   const supportedLanguages = useMemo<{ code: string; label: string }[]>(
     () => [
@@ -343,6 +356,8 @@ const LoginPage: React.FC = () => {
             {message?.text}
           </div>
         </form>
+
+        <FeishuLoginButton />
 
         <div className='login-page__footer'>
           <div className='login-page__footer-content'>

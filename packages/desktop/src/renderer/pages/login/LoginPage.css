@@ -395,3 +395,28 @@ body.login-page-active {
     display: none;
   }
 }
+
+.login-page__alt {
+  margin-top: 16px;
+}
+
+.login-page__alt-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: var(--color-text-3, #86909c);
+  font-size: 12px;
+}
+
+.login-page__alt-divider::before,
+.login-page__alt-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-2, #e5e6eb);
+}
+
+.login-page__feishu.arco-btn {
+  border-radius: 10px;
+}

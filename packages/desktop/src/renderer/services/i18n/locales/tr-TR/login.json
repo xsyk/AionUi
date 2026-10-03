@@ -22,5 +22,19 @@
     "networkError": "Bağlantı başarısız, lütfen tekrar deneyin",
     "serverError": "Sunucu hatası, lütfen daha sonra tekrar deneyin",
     "unknown": "Giriş başarısız, lütfen tekrar deneyin"
+  },
+  "feishu": {
+    "or": "veya",
+    "button": "Feishu ile giriş yap",
+    "errors": {
+      "disabled": "Feishu ile giriş etkin değil",
+      "state": "Feishu girişinin süresi doldu. Lütfen tekrar Feishu ile giriş yap'a tıklayın",
+      "cancelled": "Feishu yetkilendirmesi iptal edildi",
+      "tenant": "Kuruluşunuzun giriş yapmasına izin verilmiyor",
+      "account_disabled": "Bu hesap devre dışı. Lütfen yöneticiyle iletişime geçin",
+      "upstream": "Feishu geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin",
+      "server": "Sunucu hatası. Lütfen daha sonra tekrar deneyin",
+      "unknown": "Feishu ile giriş başarısız. Lütfen daha sonra tekrar deneyin"
+    }
   }
 }

@@ -22,5 +22,19 @@
     "networkError": "Error de conexión, intenta de nuevo",
     "serverError": "Error del servidor, intenta más tarde",
     "unknown": "Error al iniciar sesión, intenta de nuevo"
+  },
+  "feishu": {
+    "or": "o",
+    "button": "Iniciar sesión con Feishu",
+    "errors": {
+      "disabled": "El inicio de sesión con Feishu no está activado",
+      "state": "El inicio de sesión con Feishu caducó. Vuelve a pulsar Iniciar sesión con Feishu",
+      "cancelled": "Se canceló la autorización de Feishu",
+      "tenant": "Tu organización no tiene permiso para iniciar sesión",
+      "account_disabled": "Esta cuenta está desactivada. Contacta con el administrador",
+      "upstream": "Feishu no está disponible temporalmente. Inténtalo más tarde",
+      "server": "Error del servidor. Inténtalo más tarde",
+      "unknown": "Error al iniciar sesión con Feishu. Inténtalo más tarde"
+    }
   }
 }

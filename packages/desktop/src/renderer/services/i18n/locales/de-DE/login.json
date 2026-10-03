@@ -22,5 +22,19 @@
     "networkError": "Verbindung fehlgeschlagen, bitte erneut versuchen",
     "serverError": "Serverfehler, bitte später erneut versuchen",
     "unknown": "Anmeldung fehlgeschlagen, bitte erneut versuchen"
+  },
+  "feishu": {
+    "or": "oder",
+    "button": "Mit Feishu anmelden",
+    "errors": {
+      "disabled": "Die Feishu-Anmeldung ist nicht aktiviert",
+      "state": "Die Feishu-Anmeldung ist abgelaufen. Bitte klicken Sie erneut auf „Mit Feishu anmelden\"",
+      "cancelled": "Die Feishu-Autorisierung wurde abgebrochen",
+      "tenant": "Ihre Organisation ist nicht zur Anmeldung berechtigt",
+      "account_disabled": "Dieses Konto ist deaktiviert. Bitte wenden Sie sich an den Administrator",
+      "upstream": "Feishu ist vorübergehend nicht erreichbar. Bitte versuchen Sie es später erneut",
+      "server": "Serverfehler. Bitte versuchen Sie es später erneut",
+      "unknown": "Die Feishu-Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es später erneut"
+    }
   }
 }

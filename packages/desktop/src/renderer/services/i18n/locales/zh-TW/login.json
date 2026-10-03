@@ -22,5 +22,19 @@
     "networkError": "連線失敗，請稍後再試",
     "serverError": "伺服器發生錯誤，請稍後再試",
     "unknown": "登入失敗，請稍後再試"
+  },
+  "feishu": {
+    "or": "或",
+    "button": "使用飛書登入",
+    "errors": {
+      "disabled": "飛書登入未啟用",
+      "state": "飛書登入已失效，請重新點擊飛書登入",
+      "cancelled": "已取消飛書授權",
+      "tenant": "你不在允許登入的企業內",
+      "account_disabled": "帳號已被停用，請聯絡管理員",
+      "upstream": "飛書服務暫時無法使用，請稍後再試",
+      "server": "伺服器出了點問題，請稍後再試",
+      "unknown": "飛書登入失敗，請稍後再試"
+    }
   }
 }
