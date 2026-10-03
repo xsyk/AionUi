@@ -236,7 +236,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         };
       }
 
-      setUser(data.user);
+      // `/login` returns only id/username; `/api/auth/user` also carries
+      // account flags such as `is_super_admin`, so read the full profile.
+      setUser((await fetchCurrentUser()) ?? data.user);
       setStatus('authenticated');
       setReady(true);
 
@@ -295,6 +297,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setStatus('unauthenticated');
       // Clear cache on logout for security
       clearAuthCache();
+      // Several accounts can share one browser. Reload once the caller's own
+      // cleanup has run so no in-memory state (sider lists, SWR caches, act-as)
+      // of this account survives into the next sign-in.
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          window.location.hash = '#/login';
+          window.location.reload();
+        }, 0);
+      }
     }
   }, []);
 
