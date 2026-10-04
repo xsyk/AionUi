@@ -20,6 +20,8 @@ export type AdminUser = {
   last_login: number | null;
   is_super_admin: boolean;
   source: 'password' | 'feishu';
+  email: string | null;
+  avatar_url: string | null;
 };
 
 export type AdminConversation = {

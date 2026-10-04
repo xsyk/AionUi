@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Button, Form, Input, Message, Modal, Table, Tag } from '@arco-design/web-react';
+import { Avatar, Button, Form, Input, Message, Modal, Table, Tag } from '@arco-design/web-react';
 import type { TableColumnProps } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -110,9 +110,19 @@ const UserSettings: React.FC = () => {
       title: t('settings.userManagement.username'),
       dataIndex: 'username',
       render: (_: unknown, row) => (
-        <span className='inline-flex items-center gap-6px'>
-          {row.username}
-          {row.is_super_admin && <Tag color='arcoblue'>{t('settings.userManagement.superAdmin')}</Tag>}
+        <span className='inline-flex items-center gap-8px'>
+          {row.avatar_url && (
+            <Avatar size={24} style={{ flexShrink: 0 }}>
+              <img src={row.avatar_url} alt={row.username} referrerPolicy='no-referrer' />
+            </Avatar>
+          )}
+          <span className='inline-flex flex-col'>
+            <span className='inline-flex items-center gap-6px'>
+              {row.username}
+              {row.is_super_admin && <Tag color='arcoblue'>{t('settings.userManagement.superAdmin')}</Tag>}
+            </span>
+            {row.email && <span className='text-12px text-t-tertiary'>{row.email}</span>}
+          </span>
         </span>
       ),
     },
