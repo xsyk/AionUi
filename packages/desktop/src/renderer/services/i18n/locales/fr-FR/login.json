@@ -32,6 +32,7 @@
       "cancelled": "L'autorisation Feishu a été annulée",
       "tenant": "Votre organisation n'est pas autorisée à se connecter",
       "account_disabled": "Ce compte est désactivé. Contactez l'administrateur",
+      "pending": "Votre demande d'inscription a été envoyée. Demandez à un administrateur d'activer votre compte dans la gestion des utilisateurs",
       "upstream": "Feishu est temporairement indisponible. Réessayez plus tard",
       "server": "Erreur du serveur. Réessayez plus tard",
       "unknown": "Échec de la connexion Feishu. Réessayez plus tard"

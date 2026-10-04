@@ -32,6 +32,7 @@
       "cancelled": "Feishu yetkilendirmesi iptal edildi",
       "tenant": "Kuruluşunuzun giriş yapmasına izin verilmiyor",
       "account_disabled": "Bu hesap devre dışı. Lütfen yöneticiyle iletişime geçin",
+      "pending": "Kayıt isteğiniz gönderildi. Hesabınızı Kullanıcı Yönetimi'nde etkinleştirmesi için bir yöneticiye başvurun",
       "upstream": "Feishu geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin",
       "server": "Sunucu hatası. Lütfen daha sonra tekrar deneyin",
       "unknown": "Feishu ile giriş başarısız. Lütfen daha sonra tekrar deneyin"

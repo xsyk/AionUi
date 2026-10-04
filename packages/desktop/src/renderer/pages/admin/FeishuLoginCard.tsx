@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Button, Card, Collapse, Form, Input, Message, Switch, Typography } from '@arco-design/web-react';
+import { Button, Card, Collapse, Form, Input, Message, Radio, Switch, Typography } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackendHttpError } from '@/common/adapter/httpBridge';
@@ -21,6 +21,7 @@ function toForm(config: FeishuLoginConfig): FeishuLoginForm {
     public_base_url: config.public_base_url || window.location.origin,
     api_base: config.api_base ?? '',
     accounts_base: config.accounts_base ?? '',
+    signup_policy: config.signup_policy ?? 'approval',
   };
 }
 
@@ -107,6 +108,12 @@ const FeishuLoginCard: React.FC = () => {
               </Button>
             )}
           </span>
+        </Form.Item>
+        <Form.Item label={t(`${P}.signupPolicy`)} field='signup_policy' extra={t(`${P}.signupPolicyHint`)}>
+          <Radio.Group data-testid='feishu-signup-policy'>
+            <Radio value='approval'>{t(`${P}.signupApproval`)}</Radio>
+            <Radio value='open'>{t(`${P}.signupOpen`)}</Radio>
+          </Radio.Group>
         </Form.Item>
         <Collapse bordered={false}>
           <Collapse.Item header={t(`${P}.advanced`)} name='advanced'>

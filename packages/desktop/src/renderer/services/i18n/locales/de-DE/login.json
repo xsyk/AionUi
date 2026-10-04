@@ -32,6 +32,7 @@
       "cancelled": "Die Feishu-Autorisierung wurde abgebrochen",
       "tenant": "Ihre Organisation ist nicht zur Anmeldung berechtigt",
       "account_disabled": "Dieses Konto ist deaktiviert. Bitte wenden Sie sich an den Administrator",
+      "pending": "Ihre Registrierungsanfrage wurde übermittelt. Bitten Sie einen Administrator, Ihr Konto in der Benutzerverwaltung zu aktivieren",
       "upstream": "Feishu ist vorübergehend nicht erreichbar. Bitte versuchen Sie es später erneut",
       "server": "Serverfehler. Bitte versuchen Sie es später erneut",
       "unknown": "Die Feishu-Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es später erneut"

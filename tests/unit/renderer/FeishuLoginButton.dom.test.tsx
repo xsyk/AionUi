@@ -13,7 +13,10 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => k
 import FeishuLoginButton from '@/renderer/pages/login/FeishuLoginButton';
 
 function stubStatus(enabled: boolean) {
-  const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ data: { enabled } }) }));
+  const fetchMock = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ data: { enabled, public_base_url: enabled ? 'https://a.example.com' : null } }),
+  }));
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
 }

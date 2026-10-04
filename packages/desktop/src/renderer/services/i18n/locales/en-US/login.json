@@ -32,6 +32,7 @@
       "cancelled": "Feishu authorization was cancelled",
       "tenant": "Your organization is not allowed to sign in",
       "account_disabled": "This account is disabled. Please contact the administrator",
+      "pending": "Your sign-up request was submitted. Please ask an administrator to enable your account in User Management",
       "upstream": "Feishu is temporarily unavailable. Please try again later",
       "server": "Server error. Please try again later",
       "unknown": "Feishu sign-in failed. Please try again later"

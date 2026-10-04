@@ -9,7 +9,7 @@ import type { TableColumnProps } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
-import { adminApi } from './adminApi';
+import { adminApi, isPendingApproval } from './adminApi';
 import FeishuLoginCard from './FeishuLoginCard';
 import type { AdminUser } from './adminApi';
 import { BackendHttpError } from '@/common/adapter/httpBridge';
@@ -122,6 +122,8 @@ const UserSettings: React.FC = () => {
       render: (_: unknown, row) =>
         row.status === 'active' ? (
           <Tag color='green'>{t('settings.userManagement.active')}</Tag>
+        ) : isPendingApproval(row) ? (
+          <Tag color='orange'>{t('settings.userManagement.pending')}</Tag>
         ) : (
           <Tag color='gray'>{t('settings.userManagement.disabled')}</Tag>
         ),

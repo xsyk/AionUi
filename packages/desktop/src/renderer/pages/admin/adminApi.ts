@@ -31,6 +31,8 @@ export type AdminConversation = {
   owner: { id: string; username: string; deleted: boolean };
 };
 
+export type FeishuSignupPolicy = 'approval' | 'open';
+
 export type FeishuLoginConfig = {
   enabled: boolean;
   app_id: string;
@@ -40,6 +42,7 @@ export type FeishuLoginConfig = {
   api_base: string | null;
   accounts_base: string | null;
   callback_url: string;
+  signup_policy: FeishuSignupPolicy;
 };
 
 export type FeishuLoginForm = {
@@ -49,6 +52,7 @@ export type FeishuLoginForm = {
   public_base_url: string;
   api_base: string;
   accounts_base: string;
+  signup_policy: FeishuSignupPolicy;
 };
 
 const blankToNull = (value: string) => (value.trim() ? value.trim() : null);
@@ -61,10 +65,16 @@ export function buildFeishuConfigPayload(form: FeishuLoginForm, clearTenantKey: 
     public_base_url: form.public_base_url.trim(),
     api_base: blankToNull(form.api_base),
     accounts_base: blankToNull(form.accounts_base),
+    signup_policy: form.signup_policy,
     clear_tenant_key: clearTenantKey,
   };
   if (form.app_secret.trim()) payload.app_secret = form.app_secret.trim();
   return payload;
+}
+
+/** A Feishu account that is disabled and has never signed in is waiting for approval. */
+export function isPendingApproval(user: Pick<AdminUser, 'source' | 'status' | 'last_login'>): boolean {
+  return user.source === 'feishu' && user.status === 'disabled' && !user.last_login;
 }
 
 const enc = encodeURIComponent;

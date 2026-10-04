@@ -32,6 +32,7 @@
       "cancelled": "Se canceló la autorización de Feishu",
       "tenant": "Tu organización no tiene permiso para iniciar sesión",
       "account_disabled": "Esta cuenta está desactivada. Contacta con el administrador",
+      "pending": "Se ha enviado tu solicitud de registro. Pide a un administrador que habilite tu cuenta en Gestión de usuarios",
       "upstream": "Feishu no está disponible temporalmente. Inténtalo más tarde",
       "server": "Error del servidor. Inténtalo más tarde",
       "unknown": "Error al iniciar sesión con Feishu. Inténtalo más tarde"
