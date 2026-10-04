@@ -195,7 +195,7 @@ export type CdnLatestManifest = { version: string; files: CdnManifestFile[]; rel
 
 /**
  * Pick the electron-builder channel file for the current platform/arch,
- * matching the names build-and-release uploads to the CDN root.
+ * matching the names scripts/prepare-release-assets.sh produces for the CDN root.
  */
 export const resolveCdnChannelFile = (
   runtime: RuntimePlatformInfo = { platform: process.platform, arch: process.arch }

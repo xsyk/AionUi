@@ -247,13 +247,9 @@ git tag v{target}
 git push origin v{target}
 ```
 
-Wait a few seconds for GitHub to pick up the tag push, then fetch the triggered workflow run:
+This fork has no GitHub Actions workflows, so pushing the tag does not trigger a release build; release packages are built manually.
 
-```bash
-gh run list --workflow=release.yml --branch v{target} --limit 1 --json databaseId,url
-```
-
-Display: "Tag v{target} created and pushed. Release build triggered! Action: {run URL}"
+Display: "Tag v{target} created and pushed. No CI build is triggered — build the release packages manually."
 
 ## Quick Reference
 

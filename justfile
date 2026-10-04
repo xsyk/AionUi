@@ -456,6 +456,6 @@ list-artifacts:
         echo "No build output found. Run: just build"
     fi
 
-# CI-like full build validation (mirrors GitHub Actions workflow)
+# Full local validation: lint, format check, typecheck, i18n, tests, then build
 ci-local: check test build
     @echo "CI-local pipeline passed!"

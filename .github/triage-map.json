@@ -1,5 +1,5 @@
 {
-  "$comment": "Issue module → area label → owner mapping. Single source of truth for .github/workflows/issue-triage.yml. The 'module' key must exactly match the dropdown option text in .github/ISSUE_TEMPLATE/bug_report.yml and question.yml. Edit owners here — no workflow change needed.",
+  "$comment": "Issue module → area label → owner mapping. Owner reference for CODEOWNERS. The 'module' key mirrors the dropdown option text in .github/ISSUE_TEMPLATE/bug_report.yml and question.yml.",
   "modules": [
     { "module": "Agent Detection & Connection", "label": "area/agent-detection", "owner": "kaizhou-lab" },
     { "module": "Assistants & Presets", "label": "area/assistant", "owner": "piorpua" },

@@ -200,5 +200,4 @@ When modifying build scripts:
 
 - `/packages/desktop/electron-builder.yml` - electron-builder configuration
 - `/forge.config.ts` - Electron Forge configuration
-- `/.github/workflows/build-and-release.yml` - CI/CD pipeline
 - `/package.json` - Build scripts and dependencies

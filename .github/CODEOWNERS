@@ -1,7 +1,7 @@
 # CODEOWNERS — auto-request review from module owners when a PR touches their paths.
 # Later rules override earlier ones, so keep the default first and
 # nested-directory overrides after their parent rule.
-# Owner mapping source of truth: .github/triage-map.json (issue triage uses the same table).
+# Owner mapping source of truth: .github/triage-map.json.
 
 # ---- Default fallback: everything else ----
 * @IceyLiu
