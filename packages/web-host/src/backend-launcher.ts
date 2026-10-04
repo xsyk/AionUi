@@ -193,6 +193,15 @@ export class BackendStartupCancelledError extends Error {
   }
 }
 
+/**
+ * Server deployments set `AIONUI_IDENTITY_MODE=webui` so aioncore runs with
+ * per-user login instead of the single-user `--local` mode this launcher
+ * otherwise passes. Any other value keeps `--local`.
+ */
+export function isWebuiIdentityMode(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.AIONUI_IDENTITY_MODE?.trim().toLowerCase() === 'webui';
+}
+
 export function buildSpawnArgs(config: SpawnConfig): string[] {
   const logLevel = process.env.AIONUI_LOG_LEVEL || (config.isPackaged ? 'info' : 'debug');
   const args = [
@@ -662,10 +671,12 @@ export class BackendLifecycleManager {
       );
     };
 
+    const webuiIdentity = isWebuiIdentityMode();
+    if (webuiIdentity) console.log('[aioncore] identity mode: webui (AIONUI_IDENTITY_MODE)');
     const args = buildSpawnArgs({
       port: this._port,
       dbPath,
-      local: true,
+      local: !webuiIdentity,
       parentPid: process.pid,
       logDir,
       workDir: dirs?.workDir,

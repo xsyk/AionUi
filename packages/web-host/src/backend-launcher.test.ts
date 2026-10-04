@@ -36,6 +36,7 @@ import {
   buildSpawnArgs,
   buildSpawnEnv,
   findAvailablePort,
+  isWebuiIdentityMode,
   BackendLifecycleManager,
   BackendStartupError,
 } from './backend-launcher.js';
@@ -112,6 +113,16 @@ beforeEach(() => {
 afterEach(() => {
   // Do NOT call restoreAllMocks; it would remove vi.mock() module factories.
   vi.useRealTimers();
+});
+
+describe('isWebuiIdentityMode', () => {
+  it('is true only for AIONUI_IDENTITY_MODE=webui (trimmed, case-insensitive)', () => {
+    expect(isWebuiIdentityMode({})).toBe(false);
+    expect(isWebuiIdentityMode({ AIONUI_IDENTITY_MODE: 'local' })).toBe(false);
+    expect(isWebuiIdentityMode({ AIONUI_IDENTITY_MODE: '' })).toBe(false);
+    expect(isWebuiIdentityMode({ AIONUI_IDENTITY_MODE: 'webui' })).toBe(true);
+    expect(isWebuiIdentityMode({ AIONUI_IDENTITY_MODE: ' WebUI ' })).toBe(true);
+  });
 });
 
 describe('buildSpawnArgs', () => {
@@ -467,6 +478,35 @@ describe('BackendLifecycleManager.start (success path)', () => {
     } finally {
       fetchSpy.mockRestore();
       infoSpy.mockRestore();
+    }
+  });
+
+  it('omits --local when AIONUI_IDENTITY_MODE=webui', async () => {
+    vi.stubEnv('AIONUI_IDENTITY_MODE', 'webui');
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const mgr = new BackendLifecycleManager(
+      APP_META_PACKAGED,
+      vi.fn(() => '/abs/path/aioncore')
+    );
+    try {
+      const startPromise = mgr.start('/db/path', '/log/dir', { cacheDir: '/c', workDir: '/w', logDir: '/l' });
+      await Promise.resolve();
+      emitListening(child, 55556);
+      await startPromise;
+      const args = vi.mocked(spawn).mock.calls[0][1] as string[];
+      expect(args).not.toContain('--local');
+      expect(logSpy).toHaveBeenCalledWith('[aioncore] identity mode: webui (AIONUI_IDENTITY_MODE)');
+    } finally {
+      vi.unstubAllEnvs();
+      fetchSpy.mockRestore();
+      infoSpy.mockRestore();
+      logSpy.mockRestore();
     }
   });
 });
