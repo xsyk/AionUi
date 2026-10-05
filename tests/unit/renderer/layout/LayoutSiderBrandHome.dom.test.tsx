@@ -46,6 +46,7 @@ vi.mock('@/common', () => ({
 
 // Trim Layout's collaborators to keep this a focused brand-behaviour test.
 vi.mock('@/common/config/constants', () => ({
+  APP_NAME: 'AionEasiful',
   get TEAM_MODE_ENABLED() {
     return featureMocks.teamModeEnabled;
   },
@@ -159,7 +160,7 @@ describe('Layout sider brand Home button', () => {
 
     // No actionable role/label in chat routes.
     expect(screen.queryByLabelText(BACK_KEY)).toBeNull();
-    const wordmark = screen.getByText('AionUi');
+    const wordmark = screen.getByText('AionEasiful');
     fireEvent.click(wordmark);
     expect(navigate).not.toHaveBeenCalled();
   });
@@ -168,7 +169,7 @@ describe('Layout sider brand Home button', () => {
     currentPathname = '/conversation/xyz';
     renderLayout();
 
-    fireEvent.click(screen.getByText('AionUi'));
+    fireEvent.click(screen.getByText('AionEasiful'));
     expect(navigate).not.toHaveBeenCalled();
   });
 

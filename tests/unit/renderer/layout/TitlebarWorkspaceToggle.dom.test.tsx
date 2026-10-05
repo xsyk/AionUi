@@ -14,7 +14,7 @@ vi.mock('react-router-dom', () => ({
 vi.mock('@/common', () => ({
   ipcBridge: { conversation: { get: { invoke: vi.fn() } } },
 }));
-vi.mock('@/common/config/constants', () => ({ TEAM_MODE_ENABLED: false }));
+vi.mock('@/common/config/constants', () => ({ APP_NAME: 'AionEasiful', TEAM_MODE_ENABLED: false }));
 vi.mock('@renderer/pages/conversation/GroupedHistory/ConversationSearchPopover', () => ({ default: () => null }));
 vi.mock('@/renderer/components/layout/Titlebar/MobileConversationBrand', () => ({ default: () => null }));
 vi.mock('@/renderer/components/layout/WindowControls', () => ({
@@ -58,6 +58,12 @@ describe('Titlebar workspace toggle', () => {
 
     expect(screen.getByRole('button', { name: 'common.expandMore' })).toBeInTheDocument();
     expect(screen.queryByTestId('window-controls')).not.toBeInTheDocument();
+  });
+
+  it('labels the brand with the product name', () => {
+    render(<Titlebar workspaceAvailable={false} />);
+
+    expect(screen.getByTitle('AionEasiful')).toBeInTheDocument();
   });
 
   it('has no report-issue button', () => {

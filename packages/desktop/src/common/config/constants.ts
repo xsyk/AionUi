@@ -8,6 +8,9 @@
  * AionUI应用程序共用常量
  */
 
+/** Product name shown in the UI: page title, sidebar, titlebar, notifications. */
+export const APP_NAME = 'AionEasiful';
+
 // ===== 应用内浏览器 / In-app browser =====
 
 /**
