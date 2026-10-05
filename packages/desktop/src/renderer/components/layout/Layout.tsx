@@ -137,8 +137,8 @@ const Layout: React.FC<{
     setCollapsed((previous) => !previous);
   }, []);
   useConversationShortcuts({ navigate, toggleSider });
-  // Expose navigate to code running outside the Router tree (e.g. the globally
-  // mounted FeedbackReportModal's "via chat" action).
+  // Expose navigate to code running outside the Router tree (e.g. the Butler
+  // hand-off in useTalkToButler).
   useEffect(() => {
     setGlobalNavigate(navigate);
     return () => setGlobalNavigate(null);
