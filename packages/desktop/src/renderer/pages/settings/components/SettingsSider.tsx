@@ -9,7 +9,6 @@ import {
   Computer,
   Earth,
   Inbox,
-  Info,
   Lightning,
   LinkCloud,
   Peoples,
@@ -37,7 +36,6 @@ export const BUILTIN_TAB_IDS = [
   'pet',
   'system',
   'archived',
-  'about',
 ] as const;
 
 /** Settings tab only the super admin sees; inserted before `webui`. */
@@ -71,7 +69,6 @@ const GROUP_HEADER_BEFORE: Record<string, string> = {
   agent: 'settings.groupAiCore',
   appearance: 'settings.groupApp',
   archived: 'settings.archived.title',
-  about: 'settings.groupAbout',
 };
 
 type SiderItem = {
@@ -133,7 +130,6 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
         icon: <Inbox />,
         path: 'archived',
       },
-      about: { id: 'about', label: t('settings.about'), icon: <Info />, path: 'about' },
     };
 
     // Start with ordered builtin IDs, hiding desktop-only tabs in browser mode

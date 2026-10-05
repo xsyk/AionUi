@@ -102,7 +102,7 @@ test.describe('Agent Settings Detection', () => {
 
   test('re-entering the page keeps the diagnostics surface instead of legacy picker content', async ({ page }) => {
     await goToSettings(page, 'agent');
-    await goToSettings(page, 'about');
+    await goToSettings(page, 'system');
     await goToSettings(page, 'agent');
 
     await expectAnyText(page, TEXT.customAgents);

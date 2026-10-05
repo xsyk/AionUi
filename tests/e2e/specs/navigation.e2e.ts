@@ -48,7 +48,6 @@ test.describe('Settings Pages', () => {
     { tab: 'display', name: 'Display Settings' },
     { tab: 'webui', name: 'WebUI Settings' },
     { tab: 'system', name: 'System Settings' },
-    { tab: 'about', name: 'About Page' },
   ];
 
   for (const { tab, name } of tabs) {
@@ -76,8 +75,8 @@ test.describe('Sidebar Navigation', () => {
     await goToGuid(page);
     expect(page.url()).toContain('guid');
 
-    await goToSettings(page, 'about');
-    expect(page.url()).toContain('about');
+    await goToSettings(page, 'system');
+    expect(page.url()).toContain('system');
 
     await goToGuid(page);
     expect(page.url()).toContain('guid');

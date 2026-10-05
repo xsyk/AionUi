@@ -12,11 +12,10 @@ import { type IExtensionSettingsTab } from '@/common/adapter/ipcBridge';
 import { useExtI18n } from '@/renderer/hooks/system/useExtI18n';
 import { useExtensionSettingsTabs } from '@/renderer/hooks/system/useExtensionSettingsTabs';
 import { Tabs } from '@arco-design/web-react';
-import { Computer, Earth, Info, LinkCloud, Puzzle, Toolkit } from '@icon-park/react';
+import { Computer, Earth, LinkCloud, Puzzle, Toolkit } from '@icon-park/react';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import AboutModalContent from './contents/AboutModalContent';
 import AgentModalContent from './contents/AgentModalContent';
 import ExtensionSettingsTabContent from './contents/ExtensionSettingsTabContent';
 import ModelModalContent from './contents/ModelModalContent';
@@ -55,7 +54,7 @@ const RESIZE_DEBOUNCE_DELAY = 150;
 /**
  * 内置设置标签页类型 / Built-in settings tab type
  */
-export type BuiltinSettingTab = 'model' | 'agent' | 'tools' | 'webui' | 'system' | 'about';
+export type BuiltinSettingTab = 'model' | 'agent' | 'tools' | 'webui' | 'system';
 
 /**
  * 设置标签页类型（内置 + 扩展）/ Settings tab type (built-in + extension)
@@ -118,7 +117,7 @@ export const SubModal: React.FC<SubModalProps> = ({ visible, onCancel, title, ch
  * 主设置弹窗组件 / Main settings modal component
  *
  * 提供应用的全局设置界面，包括 Gemini、模型、工具、系统和关于等多个标签页
- * Provides global settings interface with multiple tabs including Gemini, Model, Tools, System and About
+ * Provides global settings interface with multiple tabs including Gemini, Model, Tools and System
  *
  * @features
  * - 响应式设计，移动端使用下拉菜单，桌面端使用侧边栏 / Responsive design with dropdown on mobile and sidebar on desktop
@@ -210,14 +209,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
       });
     }
 
-    builtinItems.push(
-      {
-        key: 'system',
-        label: t('settings.system'),
-        icon: <Computer theme='outline' size='20' fill={iconColors.secondary} />,
-      },
-      { key: 'about', label: t('settings.about'), icon: <Info theme='outline' size='20' fill={iconColors.secondary} /> }
-    );
+    builtinItems.push({
+      key: 'system',
+      label: t('settings.system'),
+      icon: <Computer theme='outline' size='20' fill={iconColors.secondary} />,
+    });
 
     // Extension tabs — position anchoring
     const beforeMap = new Map<string, IExtensionSettingsTab[]>();
@@ -310,8 +306,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onCancel, defaul
         return <WebuiModalContent />;
       case 'system':
         return <SystemModalContent />;
-      case 'about':
-        return <AboutModalContent />;
       default:
         // If no built-in match and not an extension tab, return null
         if (!extensionTabMap.has(activeTab)) return null;

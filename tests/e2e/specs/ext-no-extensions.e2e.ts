@@ -105,8 +105,8 @@ test.describe.serial('Extension: Empty Directory / No Extensions', () => {
   });
 
   test('keeps builtin settings and channels available without extension tabs or plugins', async () => {
-    await goToSettings(page, 'about');
-    await expect(page.locator(settingsSiderItemById('about'))).toBeVisible({ timeout: 8_000 });
+    await goToSettings(page, 'system');
+    await expect(page.locator(settingsSiderItemById('system'))).toBeVisible({ timeout: 8_000 });
     await expect(page.locator('[data-settings-path^="ext/"]')).toHaveCount(0);
 
     const statuses = await getChannelPluginStatus(page);

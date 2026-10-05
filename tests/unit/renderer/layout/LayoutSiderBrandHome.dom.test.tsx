@@ -105,7 +105,7 @@ describe('Layout sider brand Home button', () => {
   });
 
   it('navigates to the recorded last non-settings path when clicked in a settings route', () => {
-    currentPathname = '/settings/about';
+    currentPathname = '/settings/system';
     sessionStorage.setItem('aion:last-non-settings-path', '/conversation/abc');
     renderLayout();
 
@@ -122,7 +122,7 @@ describe('Layout sider brand Home button', () => {
   });
 
   it('falls back to /guid when the recorded path is itself a settings path', () => {
-    currentPathname = '/settings/about';
+    currentPathname = '/settings/system';
     sessionStorage.setItem('aion:last-non-settings-path', '/settings/system');
     renderLayout();
 
@@ -131,7 +131,7 @@ describe('Layout sider brand Home button', () => {
   });
 
   it('activates via keyboard (Enter and Space) in a settings route', () => {
-    currentPathname = '/settings/about';
+    currentPathname = '/settings/system';
     sessionStorage.setItem('aion:last-non-settings-path', '/conversation/abc');
     renderLayout();
 
@@ -143,7 +143,7 @@ describe('Layout sider brand Home button', () => {
   });
 
   it('ignores non-activation keys in a settings route', () => {
-    currentPathname = '/settings/about';
+    currentPathname = '/settings/system';
     sessionStorage.setItem('aion:last-non-settings-path', '/conversation/abc');
     renderLayout();
 
@@ -197,7 +197,7 @@ describe('Layout sider brand Home button', () => {
   });
 
   it('clicking the logo icon counts toward the devtools easter-egg and never navigates', () => {
-    currentPathname = '/settings/about';
+    currentPathname = '/settings/system';
     sessionStorage.setItem('aion:last-non-settings-path', '/conversation/abc');
     const { container } = renderLayout();
 

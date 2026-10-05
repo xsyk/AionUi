@@ -14,7 +14,6 @@ import {
   Computer,
   Earth,
   Inbox,
-  Info,
   Lightning,
   LinkCloud,
   Peoples,
@@ -87,7 +86,6 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn, i
       icon: <Inbox theme='outline' size='16' />,
       path: 'archived',
     },
-    about: { id: 'about', label: t('settings.about'), icon: <Info theme='outline' size='16' />, path: 'about' },
   };
 
   const items = BUILTIN_TAB_IDS.map((id) => builtinMap[id]);

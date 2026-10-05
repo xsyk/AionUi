@@ -73,7 +73,7 @@ test.describe('Extension: Assistants', () => {
 
 test.describe('Extension System Stability', () => {
   test('navigating across all settings pages with extensions does not crash', async ({ page }) => {
-    const tabs = ['agent', 'tools', 'display', 'webui', 'system', 'about'] as const;
+    const tabs = ['agent', 'tools', 'display', 'webui', 'system'] as const;
 
     for (const tab of tabs) {
       await goToSettings(page, tab);

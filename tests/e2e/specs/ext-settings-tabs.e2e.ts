@@ -79,18 +79,18 @@ test.describe('Extension: Settings Tabs Position Anchoring', () => {
     expect(e2eIdx).toBeGreaterThan(capabilitiesIdx);
   });
 
-  test('tab with anchor "about/before" appears before About in sidebar', async ({ page }) => {
-    await goToSettings(page, 'about');
+  test('tab anchored to the removed About tab falls back to just before System', async ({ page }) => {
+    await goToSettings(page, 'system');
     await waitForExtensionSettingsTabs(page);
 
     const siderItemIds = await getSiderItemIds(page);
 
-    const aboutIdx = siderItemIds.indexOf('about');
+    const systemIdx = siderItemIds.indexOf('system');
     const beforeAboutIdx = siderItemIds.indexOf(EXT_E2E_BEFORE_ABOUT_ID);
 
-    expect(aboutIdx).toBeGreaterThanOrEqual(0);
+    expect(systemIdx).toBeGreaterThanOrEqual(0);
     expect(beforeAboutIdx).toBeGreaterThanOrEqual(0);
-    expect(beforeAboutIdx).toBeLessThan(aboutIdx);
+    expect(beforeAboutIdx).toBeLessThan(systemIdx);
   });
 
   test('tab with anchor "display/after" appears after Display in sidebar', async ({ page }) => {
