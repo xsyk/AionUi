@@ -12,9 +12,11 @@
  * wrong machine's files — the user must browse the server filesystem instead.
  * This module talks to `/api/fs/dir` (already exposed by the backend) and
  * resolves with absolute server paths, matching the native dialog's contract.
+ * When picking a folder, `/api/fs/mkdir` lets the user create one in place.
  */
 
 import { ipcBridge } from '@/common';
+import { BackendHttpError } from '@/common/adapter/httpBridge';
 import type { ShowOpenHandler, ShowOpenOptions } from '@/common/adapter/ipcBridge';
 import { Button, Input, Modal, Spin } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -24,6 +26,22 @@ import type { PickerEntry as Entry } from './webFsPickerUtils';
 import { matchesFilters, normalizeEntry, parentOf, sortEntries } from './webFsPickerUtils';
 
 const LAST_DIR_KEY = 'aionui:web-fs-picker:last-dir';
+
+/** i18n key (under `fileSelection.webFsPicker.errors`) for a failed mkdir. */
+const createErrorKey = (error: unknown): 'exists' | 'permission' | 'invalidName' | 'failed' => {
+  const status = error instanceof BackendHttpError ? error.status : 0;
+  if (status === 409) return 'exists';
+  if (status === 403) return 'permission';
+  if (status === 400) return 'invalidName';
+  return 'failed';
+};
+
+const CREATE_ERROR_DEFAULTS = {
+  exists: 'A folder with this name already exists',
+  permission: 'No permission to create a folder here',
+  invalidName: 'Invalid folder name',
+  failed: 'Could not create the folder',
+} as const;
 
 type PickerProps = {
   options: ShowOpenOptions;
@@ -47,6 +65,10 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const settledRef = useRef(false);
 
   const settle = useCallback(
@@ -64,6 +86,7 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
     async (dir: string) => {
       setLoading(true);
       setError('');
+      setCreating(false);
       try {
         const raw = (await ipcBridge.fs.getFilesByDir.invoke({ dir, root: dir })) as unknown;
         const list = Array.isArray(raw) ? raw.map(normalizeEntry).filter((e): e is Entry => e !== null) : [];
@@ -133,6 +156,32 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
 
   const confirmDisabled = fileMode && selected.length === 0 && !wantsDirectory;
 
+  const startCreating = useCallback(() => {
+    setNewName('');
+    setCreateError('');
+    setCreating(true);
+  }, []);
+
+  const submitNewFolder = useCallback(async () => {
+    const name = newName.trim();
+    if (!name || !currentDir || submitting) return;
+    setSubmitting(true);
+    setCreateError('');
+    try {
+      const created = await ipcBridge.fs.createDir.invoke({ parent: currentDir, name });
+      await load(created.path);
+    } catch (err) {
+      const key = createErrorKey(err);
+      setCreateError(
+        t(`fileSelection.webFsPicker.errors.${key}`, {
+          defaultValue: CREATE_ERROR_DEFAULTS[key],
+        })
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }, [newName, currentDir, submitting, load, t]);
+
   const handleConfirm = useCallback(() => {
     if (fileMode && selected.length > 0) {
       settle(selected);
@@ -190,7 +239,40 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
         <Button onClick={() => void load(pathDraft.trim() || '/')} disabled={loading}>
           {t('fileSelection.webFsPicker.go', { defaultValue: 'Go' })}
         </Button>
+        {wantsDirectory && (
+          <Button onClick={startCreating} disabled={loading || !currentDir}>
+            {t('fileSelection.webFsPicker.newFolder', { defaultValue: 'New folder' })}
+          </Button>
+        )}
       </div>
+
+      {creating && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Input
+              autoFocus
+              value={newName}
+              onChange={setNewName}
+              onPressEnter={() => void submitNewFolder()}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  // Close only the inline row, not the whole dialog.
+                  event.stopPropagation();
+                  setCreating(false);
+                }
+              }}
+              placeholder={t('fileSelection.webFsPicker.newFolderPlaceholder', { defaultValue: 'Folder name' })}
+            />
+            <Button type='primary' loading={submitting} onClick={() => void submitNewFolder()}>
+              {t('fileSelection.webFsPicker.create', { defaultValue: 'Create' })}
+            </Button>
+            <Button onClick={() => setCreating(false)}>{t('common.cancel', { defaultValue: 'Cancel' })}</Button>
+          </div>
+          {createError && (
+            <div style={{ marginTop: 6, fontSize: 12, color: 'rgb(var(--danger-6))' }}>{createError}</div>
+          )}
+        </div>
+      )}
 
       <div
         style={{

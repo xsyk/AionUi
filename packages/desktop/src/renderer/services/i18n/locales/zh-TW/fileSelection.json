@@ -10,6 +10,15 @@
     "selectedCount": "已選擇 {{count}} 項",
     "up": "上級",
     "go": "前往",
-    "empty": "這裡空空如也"
+    "empty": "這裡空空如也",
+    "newFolder": "新增資料夾",
+    "newFolderPlaceholder": "資料夾名稱",
+    "create": "建立",
+    "errors": {
+      "exists": "已存在同名的資料夾或檔案",
+      "permission": "沒有權限在這裡新增資料夾",
+      "invalidName": "資料夾名稱不合法",
+      "failed": "新增資料夾失敗"
+    }
   }
 }

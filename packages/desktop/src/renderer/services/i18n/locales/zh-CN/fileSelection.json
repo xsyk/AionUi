@@ -10,6 +10,15 @@
     "selectedCount": "已选择 {{count}} 项",
     "up": "上级",
     "go": "前往",
-    "empty": "这里空空如也"
+    "empty": "这里空空如也",
+    "newFolder": "新建文件夹",
+    "newFolderPlaceholder": "文件夹名称",
+    "create": "创建",
+    "errors": {
+      "exists": "已存在同名的文件夹或文件",
+      "permission": "没有权限在这里新建文件夹",
+      "invalidName": "文件夹名称不合法",
+      "failed": "新建文件夹失败"
+    }
   }
 }

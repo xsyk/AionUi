@@ -10,6 +10,15 @@
     "selectedCount": "{{count}}개 선택됨",
     "up": "위로",
     "go": "이동",
-    "empty": "비어 있습니다"
+    "empty": "비어 있습니다",
+    "newFolder": "새 폴더",
+    "newFolderPlaceholder": "폴더 이름",
+    "create": "만들기",
+    "errors": {
+      "exists": "같은 이름의 폴더 또는 파일이 이미 있습니다",
+      "permission": "여기에 폴더를 만들 권한이 없습니다",
+      "invalidName": "폴더 이름이 올바르지 않습니다",
+      "failed": "폴더를 만들 수 없습니다"
+    }
   }
 }

@@ -10,6 +10,15 @@
     "selectedCount": "{{count}} ausgewählt",
     "up": "Nach oben",
     "go": "Los",
-    "empty": "Hier ist nichts"
+    "empty": "Hier ist nichts",
+    "newFolder": "Neuer Ordner",
+    "newFolderPlaceholder": "Ordnername",
+    "create": "Erstellen",
+    "errors": {
+      "exists": "Ein Ordner oder eine Datei mit diesem Namen existiert bereits",
+      "permission": "Keine Berechtigung, hier einen Ordner zu erstellen",
+      "invalidName": "Ungültiger Ordnername",
+      "failed": "Ordner konnte nicht erstellt werden"
+    }
   }
 }

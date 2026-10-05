@@ -10,6 +10,15 @@
     "selectedCount": "{{count}} sélectionné(s)",
     "up": "Remonter",
     "go": "Aller",
-    "empty": "Rien ici"
+    "empty": "Rien ici",
+    "newFolder": "Nouveau dossier",
+    "newFolderPlaceholder": "Nom du dossier",
+    "create": "Créer",
+    "errors": {
+      "exists": "Un dossier ou un fichier portant ce nom existe déjà",
+      "permission": "Vous n'avez pas l'autorisation de créer un dossier ici",
+      "invalidName": "Nom de dossier non valide",
+      "failed": "Impossible de créer le dossier"
+    }
   }
 }

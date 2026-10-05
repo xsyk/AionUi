@@ -845,6 +845,9 @@ function fromBackendFileMetadata(raw: RawFileMetadata): IFileMetadata {
 
 export const fs = {
   getFilesByDir: httpPost<Array<IDirOrFile>, { dir: string; root: string }>('/api/fs/dir'),
+  // Create one folder inside `parent` (WebUI server picker). Errors: 400 bad
+  // name, 403 no permission, 404 parent gone, 409 name taken.
+  createDir: httpPost<{ path: string }, { parent: string; name: string }>('/api/fs/mkdir'),
   // Reveal a project-scoped entry in the OS file manager (Finder/Explorer).
   // The backend resolves the pe-ref to an absolute path (resolve_reference) and
   // calls shell.showItemInFolder — the front end never builds the absolute path

@@ -10,6 +10,15 @@
     "selectedCount": "{{count}} seçildi",
     "up": "Yukarı",
     "go": "Git",
-    "empty": "Burada bir şey yok"
+    "empty": "Burada bir şey yok",
+    "newFolder": "Yeni klasör",
+    "newFolderPlaceholder": "Klasör adı",
+    "create": "Oluştur",
+    "errors": {
+      "exists": "Bu adda bir klasör veya dosya zaten var",
+      "permission": "Burada klasör oluşturma izniniz yok",
+      "invalidName": "Geçersiz klasör adı",
+      "failed": "Klasör oluşturulamadı"
+    }
   }
 }

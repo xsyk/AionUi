@@ -10,6 +10,15 @@
     "selectedCount": "{{count}} 件選択中",
     "up": "上へ",
     "go": "移動",
-    "empty": "ここには何もありません"
+    "empty": "ここには何もありません",
+    "newFolder": "新しいフォルダー",
+    "newFolderPlaceholder": "フォルダー名",
+    "create": "作成",
+    "errors": {
+      "exists": "同じ名前のフォルダーまたはファイルが既に存在します",
+      "permission": "ここにフォルダーを作成する権限がありません",
+      "invalidName": "フォルダー名が無効です",
+      "failed": "フォルダーを作成できませんでした"
+    }
   }
 }

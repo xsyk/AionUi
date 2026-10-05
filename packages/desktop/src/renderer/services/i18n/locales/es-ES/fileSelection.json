@@ -10,6 +10,15 @@
     "selectedCount": "{{count}} seleccionado(s)",
     "up": "Arriba",
     "go": "Ir",
-    "empty": "No hay nada aquí"
+    "empty": "No hay nada aquí",
+    "newFolder": "Nueva carpeta",
+    "newFolderPlaceholder": "Nombre de la carpeta",
+    "create": "Crear",
+    "errors": {
+      "exists": "Ya existe una carpeta o un archivo con este nombre",
+      "permission": "No tienes permiso para crear una carpeta aquí",
+      "invalidName": "Nombre de carpeta no válido",
+      "failed": "No se pudo crear la carpeta"
+    }
   }
 }

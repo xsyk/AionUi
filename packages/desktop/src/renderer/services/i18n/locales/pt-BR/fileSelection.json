@@ -10,6 +10,15 @@
     "selectedCount": "{{count}} selecionado(s)",
     "up": "Acima",
     "go": "Ir",
-    "empty": "Nada aqui"
+    "empty": "Nada aqui",
+    "newFolder": "Nova pasta",
+    "newFolderPlaceholder": "Nome da pasta",
+    "create": "Criar",
+    "errors": {
+      "exists": "Já existe uma pasta ou arquivo com este nome",
+      "permission": "Sem permissão para criar uma pasta aqui",
+      "invalidName": "Nome de pasta inválido",
+      "failed": "Não foi possível criar a pasta"
+    }
   }
 }
