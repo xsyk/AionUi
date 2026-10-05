@@ -2,13 +2,16 @@
 // (index.html) for failed script requests, causing "module script MIME text/html"
 // errors when the server was down or served a different asset hash. The v2
 // activate handler deletes v1, flushing any poisoned cached entries.
-const CACHE_NAME = 'aionui-webui-v2';
+// v3 flushes the cached pre-AionEasiful icons and manifest.
+const CACHE_NAME = 'aionui-webui-v3';
 const NON_CACHEABLE_PATHS = new Set(['/qr-login']);
 const OFFLINE_PAGE_URL = new URL('./index.html', self.location.href).toString();
 const PRECACHE_URLS = [
   new URL('./', self.location.href).toString(),
   OFFLINE_PAGE_URL,
   new URL('./manifest.webmanifest', self.location.href).toString(),
+  new URL('./favicon.ico', self.location.href).toString(),
+  new URL('./favicon.png', self.location.href).toString(),
   new URL('./pwa/icon-192.png', self.location.href).toString(),
   new URL('./pwa/icon-512.png', self.location.href).toString(),
 ];
