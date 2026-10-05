@@ -14,7 +14,7 @@
     "error": "Error",
     "unread": "New execution",
     "unconfigured": "No scheduled task",
-    "defaultPrompt": "Every day at 10am, search for the latest AI news, summarize and output an insight report. (AionEasiful'de zamanlanmış bir görev oluşturmak için lütfen /cron becerisini kullan.)"
+    "defaultPrompt": "Every day at 10am, search for the latest AI news, summarize and output an insight report. (AionEasiful'da zamanlanmış bir görev oluşturmak için lütfen /cron becerisini kullan.)"
   },
   "actions": {
     "goTo": "View Chat",
@@ -67,7 +67,7 @@
     "newTask": "Yeni görev",
     "createViaChat": "Sohbetle oluştur",
     "createManually": "Manuel oluştur",
-    "description": "Görevleri bir zamanlamayla çalıştırın. Ayrıca herhangi bir konuşmada AionEasiful'den sizin için bir görev oluşturmasını isteyebilirsiniz.",
+    "description": "Görevleri bir zamanlamayla çalıştırın. Ayrıca herhangi bir konuşmada AionEasiful'dan sizin için bir görev oluşturmasını isteyebilirsiniz.",
     "awakeBanner": "Zamanlanmış görevler yalnızca bilgisayarınız açıkken çalışır.",
     "keepAwake": "Uyanık tut",
     "keepAwakeTooltip": "Etkinleştirildiğinde AionEasiful bilgisayarınızın uyku moduna geçmesini engeller",

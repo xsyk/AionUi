@@ -140,7 +140,7 @@
       "check_provider_base_url": "Verifique a URL Base do provedor de modelos, o caminho da API, o proxy e a compatibilidade da API.",
       "change_model": "Escolha um modelo disponível para a conta atual e que suporte esta solicitação.",
       "reduce_context": "Reduza o conteúdo da mensagem, os arquivos referenciados ou o tamanho do contexto e tente novamente.",
-      "send_feedback": "Envie feedback com logs para que a equipe possa investigar."
+      "send_feedback": "Use “Perguntar ao Mordomo” para que ele diagnostique o problema."
     },
     "ownership": {
       "aionui": "Aplicativo",
@@ -151,7 +151,7 @@
     "codes": {
       "AIONUI_STREAM_BROKEN": {
         "title": "O fluxo de resposta foi interrompido",
-        "body": "O aplicativo aceitou sua mensagem, mas o fluxo de resposta terminou inesperadamente. Tente novamente; se acontecer de novo, envie feedback."
+        "body": "O aplicativo aceitou sua mensagem, mas o fluxo de resposta terminou inesperadamente. Tente novamente; se acontecer de novo, use “Perguntar ao Mordomo”."
       },
       "AIONUI_STATE_INCONSISTENT": {
         "title": "O estado da conversa está fora de sincronia",
@@ -163,7 +163,7 @@
       },
       "AIONUI_INTERNAL_ERROR": {
         "title": "A solicitação falhou no aplicativo",
-        "body": "A solicitação falhou enquanto o aplicativo a estava processando. Tente novamente uma vez; se se repetir, envie feedback."
+        "body": "A solicitação falhou enquanto o aplicativo a estava processando. Tente novamente uma vez; se se repetir, use “Perguntar ao Mordomo”."
       },
       "AIONUI_CONVERSATION_BUSY": {
         "title": "A conversa está ocupada",
@@ -333,7 +333,7 @@
       },
       "MCP_TOOL_RESPONSE_UNEXPECTED": {
         "title": "The team helper returned an unexpected response",
-        "body": "AionEasiful received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
+        "body": "O AionEasiful recebeu uma resposta inesperada do assistente de equipe local. Tente novamente uma vez; se o problema persistir, use “Perguntar ao Mordomo”."
       },
       "MCP_TCP_READ_FAILED": {
         "title": "Failed to read from the local team helper",

@@ -71,7 +71,7 @@ describe('WebFsPicker new folder', () => {
   });
 
   it.each([
-    [409, 'A folder with this name already exists'],
+    [409, 'A file or folder with this name already exists'],
     [403, 'No permission to create a folder here'],
     [400, 'Invalid folder name'],
     [500, 'Could not create the folder'],
@@ -100,15 +100,18 @@ describe('WebFsPicker new folder', () => {
     expect(mocks.createDir).not.toHaveBeenCalled();
   });
 
-  it('cancels without calling the backend', async () => {
-    openDirectoryPicker();
+  it('Escape closes only the name field, not the picker', async () => {
+    const onDone = vi.fn();
+    render(<WebFsPicker options={{ properties: ['openDirectory'], defaultPath: '/srv' }} onDone={onDone} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'New folder' }));
     fireEvent.keyDown(screen.getByPlaceholderText('Folder name'), { key: 'Escape', code: 'Escape', keyCode: 27 });
 
     expect(screen.queryByPlaceholderText('Folder name')).toBeNull();
     expect(mocks.createDir).not.toHaveBeenCalled();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // A closing picker calls onDone 200ms after settling; give it time to.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it('is not offered when picking files', async () => {

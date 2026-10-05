@@ -37,7 +37,7 @@ const createErrorKey = (error: unknown): 'exists' | 'permission' | 'invalidName'
 };
 
 const CREATE_ERROR_DEFAULTS = {
-  exists: 'A folder with this name already exists',
+  exists: 'A file or folder with this name already exists',
   permission: 'No permission to create a folder here',
   invalidName: 'Invalid folder name',
   failed: 'Could not create the folder',

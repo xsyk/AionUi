@@ -139,7 +139,7 @@
       "check_provider_base_url": "Check the model provider Base URL, API path, proxy, and API compatibility.",
       "change_model": "Choose a model that is available for the current account and supports this request.",
       "reduce_context": "Reduce the message content, referenced files, or context size, then retry.",
-      "send_feedback": "Send feedback with logs so the team can investigate."
+      "send_feedback": "可以點「找管家排查」，讓管家幫你排查。"
     },
     "ownership": {
       "aionui": "應用",
@@ -150,7 +150,7 @@
     "codes": {
       "AIONUI_STREAM_BROKEN": {
         "title": "回應流異常中斷",
-        "body": "訊息已送出，但回應流異常結束。請先重試；如果反覆出現，可以提交回饋。"
+        "body": "訊息已送出，但回應流異常結束。請先重試；如果反覆出現，可以點「找管家排查」。"
       },
       "AIONUI_STATE_INCONSISTENT": {
         "title": "會話狀態不一致",
@@ -162,7 +162,7 @@
       },
       "AIONUI_INTERNAL_ERROR": {
         "title": "應用處理失敗",
-        "body": "本次請求在應用程式處理過程中失敗。請先重試一次；如果仍然出現，可以提交回饋。"
+        "body": "本次請求在應用程式處理過程中失敗。請先重試一次；如果仍然出現，可以點「找管家排查」。"
       },
       "AIONUI_CONVERSATION_BUSY": {
         "title": "會話正在處理上一則訊息",
@@ -327,7 +327,7 @@
       },
       "MCP_TOOL_RESPONSE_UNEXPECTED": {
         "title": "團隊輔助程序回傳了異常回應",
-        "body": "AionEasiful 收到了本地團隊輔助程序的異常回應。請先重試一次，若持續發生再回報問題。"
+        "body": "AionEasiful 收到了本地團隊輔助程序的異常回應。請先重試一次；若持續發生，可以點「找管家排查」。"
       },
       "MCP_TCP_READ_FAILED": {
         "title": "讀取本地團隊輔助程序失敗",

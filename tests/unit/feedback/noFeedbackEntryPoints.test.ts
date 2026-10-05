@@ -49,6 +49,15 @@ describe('feedback channel removal', () => {
     );
   });
 
+  it.each([
+    'pages/conversation/Messages/components/MessageTips.tsx',
+    'pages/conversation/Messages/components/MessageToolGroup.tsx',
+    'pages/conversation/Messages/components/MessageAgentStatus.tsx',
+  ])('%s still offers the Butler diagnose chip on errors', (file) => {
+    const code = fs.readFileSync(src(file), 'utf-8');
+    expect(code).toMatch(/<ButlerDiagnoseButton/);
+  });
+
   it('drops the GitHub star quick action from the home page', () => {
     const code = fs.readFileSync(src('pages/guid/components/QuickActionButtons.tsx'), 'utf-8');
     expect(code).not.toMatch(/github\.com|quickActionStar|quickActionFeedback/);

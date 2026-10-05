@@ -21,7 +21,6 @@ export const ROUTES = {
     display: '#/settings/appearance',
     webui: '#/settings/webui',
     system: '#/settings/system',
-    about: '#/settings/about',
   },
   /** Dynamic extension settings tab route */
   extensionSettings: (tabId: string) => `#/settings/ext/${tabId}`,

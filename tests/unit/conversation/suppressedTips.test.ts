@@ -6,6 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { isSuppressedTip, type TMessage } from '@/common/chat/chatLib';
+import type { TChatConversation } from '@/common/config/storage';
+import { buildConversationExportText } from '@/renderer/utils/chat/conversationExport';
 
 const tip = (code?: string): TMessage => ({
   id: 't1',
@@ -34,5 +36,37 @@ describe('isSuppressedTip', () => {
       content: { content: 'CLI_VERSION_NEWER' },
     };
     expect(isSuppressedTip(text)).toBe(false);
+  });
+});
+
+describe('conversation export', () => {
+  it('leaves hidden tips out of the exported transcript', () => {
+    const labels = {
+      conversation: 'Conversation',
+      conversation_id: 'ID',
+      exportedAt: 'Exported',
+      type: 'Type',
+      noMessages: 'No messages',
+      user: 'User',
+      assistant: 'Assistant',
+      system: 'System',
+    };
+    const newer = {
+      ...tip('CLI_VERSION_NEWER'),
+      content: { content: 'newer CLI notice', type: 'info' as const, code: 'CLI_VERSION_NEWER' },
+    };
+    const older = {
+      ...tip('CLI_VERSION_OLDER'),
+      id: 't2',
+      content: { content: 'older CLI notice', type: 'info' as const, code: 'CLI_VERSION_OLDER' },
+    };
+    const text = buildConversationExportText(
+      { id: 'c1', name: 'Chat', type: 'acp' } as TChatConversation,
+      [newer as TMessage, older as TMessage],
+      labels
+    );
+
+    expect(text).not.toContain('newer CLI notice');
+    expect(text).toContain('older CLI notice');
   });
 });

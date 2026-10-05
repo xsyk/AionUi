@@ -139,7 +139,7 @@
       "check_provider_base_url": "Vérifiez l'URL de base du fournisseur de modèles, le chemin d'accès à l'API, le proxy et la compatibilité de l'API.",
       "change_model": "Choisissez un modèle disponible pour le compte courant et prenant en charge cette demande.",
       "reduce_context": "Réduisez le contenu du message, les fichiers référencés ou la taille du contexte, puis réessayez.",
-      "send_feedback": "Envoyez des commentaires avec des journaux afin que l'équipe puisse enquêter."
+      "send_feedback": "Utilisez « Demander au majordome » pour faire diagnostiquer le problème."
     },
     "ownership": {
       "aionui": "Application",
@@ -150,7 +150,7 @@
     "codes": {
       "AIONUI_STREAM_BROKEN": {
         "title": "Le flux de réponse a été interrompu",
-        "body": "L'application a accepté votre message mais le flux de réponses s'est terminé de manière inattendue. Veuillez réessayer ; si cela se reproduit, envoyez vos commentaires."
+        "body": "L'application a accepté votre message mais le flux de réponses s'est terminé de manière inattendue. Veuillez réessayer ; si cela se reproduit, utilisez « Demander au majordome »."
       },
       "AIONUI_STATE_INCONSISTENT": {
         "title": "L'état de la conversation n'est pas synchronisé",
@@ -162,7 +162,7 @@
       },
       "AIONUI_INTERNAL_ERROR": {
         "title": "La demande a échoué dans l'application",
-        "body": "La demande a échoué pendant que l'application la traitait. Veuillez réessayer une fois ; si cela se répète, envoyez des commentaires."
+        "body": "La demande a échoué pendant que l'application la traitait. Veuillez réessayer une fois ; si cela se répète, utilisez « Demander au majordome »."
       },
       "AIONUI_CONVERSATION_BUSY": {
         "title": "La conversation est occupée",
@@ -327,7 +327,7 @@
       },
       "MCP_TOOL_RESPONSE_UNEXPECTED": {
         "title": "L'assistant de l'équipe a renvoyé une réponse inattendue",
-        "body": "AionEasiful a reçu une réponse inattendue de la part de l'assistant de l'équipe locale. Réessayez une fois et signalez-le si le problème persiste."
+        "body": "AionEasiful a reçu une réponse inattendue de la part de l'assistant de l'équipe locale. Réessayez une fois ; si le problème persiste, utilisez « Demander au majordome »."
       },
       "MCP_TCP_READ_FAILED": {
         "title": "Échec de la lecture de l'assistant de l'équipe locale",

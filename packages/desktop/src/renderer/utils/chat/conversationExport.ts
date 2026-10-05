@@ -1,4 +1,4 @@
-import type { TMessage } from '@/common/chat/chatLib';
+import { isSuppressedTip, type TMessage } from '@/common/chat/chatLib';
 import type { TChatConversation } from '@/common/config/storage';
 
 const INVALID_FILENAME_CHARS_RE = /[<>:"/\\|?*]/g;
@@ -73,7 +73,7 @@ export const getMessageRoleKey = (message: TMessage): MessageRole => {
 };
 
 const isShareableMessage = (message: TMessage): boolean => {
-  return message.type === 'text' || message.type === 'tips';
+  return (message.type === 'text' || message.type === 'tips') && !isSuppressedTip(message);
 };
 
 const isUserTextMessage = (message: TMessage): boolean => {
