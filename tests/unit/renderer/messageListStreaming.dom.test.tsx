@@ -7,7 +7,7 @@
 import React, { type PropsWithChildren } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IMessageText } from '@/common/chat/chatLib';
+import type { IMessageText, IMessageTips, TMessage } from '@/common/chat/chatLib';
 import { MessageListProvider } from '@/renderer/pages/conversation/Messages/hooks';
 import MessageList from '@/renderer/pages/conversation/Messages/MessageList';
 
@@ -134,8 +134,19 @@ function createTextMessage(content: string): IMessageText {
   };
 }
 
-function Wrapper({ children, messages }: PropsWithChildren<{ messages: IMessageText[] }>): JSX.Element {
+function Wrapper({ children, messages }: PropsWithChildren<{ messages: TMessage[] }>): JSX.Element {
   return <MessageListProvider value={messages}>{children}</MessageListProvider>;
+}
+
+function createTipMessage(id: string, code: string): IMessageTips {
+  return {
+    id,
+    conversation_id: 'conversation-1',
+    type: 'tips',
+    position: 'center',
+    content: { content: `${code} notice`, type: 'info', code },
+    created_at: 2,
+  };
 }
 
 function setScrollableMetrics(
@@ -263,5 +274,23 @@ describe('MessageList streaming scroll behavior', () => {
     flushResizeObserver();
 
     expect(scroller.scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('hides stored newer-CLI notices but keeps other tips', () => {
+    render(
+      <Wrapper
+        messages={[
+          createTextMessage('hello'),
+          createTipMessage('tip-newer', 'CLI_VERSION_NEWER'),
+          createTipMessage('tip-older', 'CLI_VERSION_OLDER'),
+        ]}
+      >
+        <MessageList />
+      </Wrapper>
+    );
+
+    expect(screen.getAllByText('tips')).toHaveLength(1);
+    expect(document.getElementById('message-tip-newer')).toBeNull();
+    expect(document.getElementById('message-tip-older')).not.toBeNull();
   });
 });

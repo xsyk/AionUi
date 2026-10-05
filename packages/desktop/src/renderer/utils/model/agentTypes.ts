@@ -237,14 +237,17 @@ export function formatManagedAgentDiagnosticMessage(t: TFunction, agent: Managed
         resource,
         defaultValue: fallback,
       });
-    // NOT failures: the agent probed online and works, the installed CLI just
-    // differs from the build it was verified against. The two version numbers
-    // arrive in `last_check_error_message` and are appended rather than
+    // A newer CLI is no longer reported (the backend stopped flagging it), but
+    // availability snapshots taken before that may still carry the code.
+    case 'version_drift_newer':
+      return '';
+    // NOT a failure: the agent probed online and works, the installed CLI is
+    // just older than the build it was verified against. The two version
+    // numbers arrive in `last_check_error_message` and are appended rather than
     // interpolated — the availability snapshot has no structured params column
     // to carry them, and they are the part the user acts on, so they have to
     // survive translation.
-    case 'version_drift_older':
-    case 'version_drift_newer': {
+    case 'version_drift_older': {
       const explanation = t(`settings.agentManagement.errorCodes.${agent.last_check_error_code}`, {
         defaultValue: agent.last_check_guidance || '',
       });

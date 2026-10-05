@@ -82,6 +82,31 @@ describe('formatManagedAgentDiagnosticMessage', () => {
     expect(message).toBe('Install codex and retry the connection test.');
   });
 
+  it('says nothing about a CLI newer than the verified release', () => {
+    const message = formatManagedAgentDiagnosticMessage(
+      t,
+      managedAgent({
+        last_check_error_code: 'version_drift_newer',
+        last_check_error_message: 'claude 9.9.9 / verified 2.1.236',
+        last_check_guidance: 'The installed claude is newer than the version AionUi verified.',
+      })
+    );
+
+    expect(message).toBe('');
+  });
+
+  it('still explains a CLI older than the verified release, with the versions', () => {
+    const message = formatManagedAgentDiagnosticMessage(
+      t,
+      managedAgent({
+        last_check_error_code: 'version_drift_older',
+        last_check_error_message: 'claude 2.1.100 / verified 2.1.236',
+      })
+    );
+
+    expect(message).toContain('claude 2.1.100 / verified 2.1.236');
+  });
+
   it('falls back to backend message when the code is unknown', () => {
     const message = formatManagedAgentDiagnosticMessage(
       t,

@@ -432,6 +432,16 @@ export type TMessage =
   | IMessageAvailableCommands
   | IMessageAcpTerminalOutput;
 
+/**
+ * Tip codes the UI no longer shows. The backend stopped emitting
+ * `CLI_VERSION_NEWER`, but conversations keep the ones stored before that.
+ */
+const SUPPRESSED_TIP_CODES: ReadonlySet<string> = new Set(['CLI_VERSION_NEWER']);
+
+/** Whether a stored message is a tip the UI deliberately hides. */
+export const isSuppressedTip = (message: TMessage): boolean =>
+  message.type === 'tips' && typeof message.content.code === 'string' && SUPPRESSED_TIP_CODES.has(message.content.code);
+
 // 统一所有需要用户交互的用户类型
 export interface IConfirmation<Option extends any = any> {
   title?: string;

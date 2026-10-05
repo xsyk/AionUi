@@ -5,7 +5,13 @@
  */
 
 import type { IConversationArtifact } from '@/common/adapter/ipcBridge';
-import type { IMessageAcpToolCall, IMessageToolCall, IMessageToolGroup, TMessage } from '@/common/chat/chatLib';
+import {
+  isSuppressedTip,
+  type IMessageAcpToolCall,
+  type IMessageToolCall,
+  type IMessageToolGroup,
+  type TMessage,
+} from '@/common/chat/chatLib';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { useConversationRuntimeView } from '@/renderer/pages/conversation/runtime/useConversationRuntimeView';
 import { getChatSurfaceWidthClass } from '@/renderer/pages/conversation/utils/chatSurfaceWidth';
@@ -407,6 +413,7 @@ const MessageList: React.FC<{ className?: string; emptySlot?: React.ReactNode }>
       // Skip hidden and available_commands messages
       if (message.hidden) continue;
       if (message.type === 'available_commands') continue;
+      if (isSuppressedTip(message)) continue;
       // A plan renders in ConversationPlanBar, never in the stream. Filtered
       // here rather than rendered as null: a null row still occupies a slot.
       if (message.type === 'plan') continue;
