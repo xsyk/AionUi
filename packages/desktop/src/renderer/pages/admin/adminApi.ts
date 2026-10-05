@@ -57,20 +57,26 @@ export type FeishuLoginForm = {
   signup_policy: FeishuSignupPolicy;
 };
 
-const blankToNull = (value: string) => (value.trim() ? value.trim() : null);
+const blankToNull = (value: string | undefined) => (value?.trim() ? value.trim() : null);
 
-/** PUT body for `/api/admin/feishu-login`; a blank secret is omitted so the stored one is kept. */
-export function buildFeishuConfigPayload(form: FeishuLoginForm, clearTenantKey: boolean): Record<string, unknown> {
+/**
+ * PUT body for `/api/admin/feishu-login`; a blank secret is omitted so the stored one is kept.
+ * Accepts a partial form: fields that were never mounted come back `undefined`.
+ */
+export function buildFeishuConfigPayload(
+  form: Partial<FeishuLoginForm>,
+  clearTenantKey: boolean
+): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    enabled: form.enabled,
-    app_id: form.app_id.trim(),
-    public_base_url: form.public_base_url.trim(),
+    enabled: Boolean(form.enabled),
+    app_id: (form.app_id ?? '').trim(),
+    public_base_url: (form.public_base_url ?? '').trim(),
     api_base: blankToNull(form.api_base),
     accounts_base: blankToNull(form.accounts_base),
-    signup_policy: form.signup_policy,
+    signup_policy: form.signup_policy ?? 'approval',
     clear_tenant_key: clearTenantKey,
   };
-  if (form.app_secret.trim()) payload.app_secret = form.app_secret.trim();
+  if (form.app_secret?.trim()) payload.app_secret = form.app_secret.trim();
   return payload;
 }
 

@@ -48,7 +48,7 @@ const FeishuLoginCard: React.FC = () => {
   }, [apply, t]);
 
   const save = async (clearTenantKey = false) => {
-    const values = form.getFieldsValue() as FeishuLoginForm;
+    const values = form.getFieldsValue() as Partial<FeishuLoginForm>;
     setSaving(true);
     try {
       apply(await adminApi.saveFeishuLogin(buildFeishuConfigPayload(values, clearTenantKey)));
@@ -115,7 +115,7 @@ const FeishuLoginCard: React.FC = () => {
             <Radio value='open'>{t(`${P}.signupOpen`)}</Radio>
           </Radio.Group>
         </Form.Item>
-        <Collapse bordered={false}>
+        <Collapse bordered={false} lazyload={false}>
           <Collapse.Item header={t(`${P}.advanced`)} name='advanced'>
             <Form.Item label={t(`${P}.apiBase`)} field='api_base'>
               <Input placeholder='https://open.feishu.cn' data-testid='feishu-api-base' />

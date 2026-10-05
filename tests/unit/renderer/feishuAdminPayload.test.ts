@@ -31,6 +31,15 @@ describe('buildFeishuConfigPayload', () => {
     });
   });
 
+  it('treats fields that were never mounted as blank', () => {
+    const payload = buildFeishuConfigPayload(
+      { enabled: true, app_id: 'cli_a', public_base_url: 'https://a.example.com' },
+      false
+    );
+    expect(payload).toMatchObject({ api_base: null, accounts_base: null, signup_policy: 'approval' });
+    expect(payload).not.toHaveProperty('app_secret');
+  });
+
   it('sends a new secret and the clear-tenant flag', () => {
     const payload = buildFeishuConfigPayload({ ...form, app_secret: ' s3 ', api_base: 'http://mock:9' }, true);
     expect(payload).toMatchObject({ app_secret: 's3', api_base: 'http://mock:9', clear_tenant_key: true });
