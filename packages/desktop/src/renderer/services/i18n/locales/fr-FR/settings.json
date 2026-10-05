@@ -1473,7 +1473,7 @@
       "signupPolicyHint": "Approbation requise : les personnes qui se connectent avec Feishu pour la première fois ne peuvent utiliser le système qu'après qu'un administrateur les a activées dans la liste des utilisateurs ci-dessous. Les modifications ne concernent que les premières connexions ultérieures.",
       "advanced": "Avancé",
       "apiBase": "URL de l'API Feishu",
-      "accountsBase": "URL d'autorisation et de jeton Feishu",
+      "accountsBase": "URL d'autorisation Feishu",
       "guide": "Configuration :\n1. Créez une application d'entreprise personnalisée dans la plateforme ouverte Feishu et copiez son App ID et son App Secret ;\n2. Dans les paramètres de sécurité, ajoutez l'URL de rappel ci-dessus comme URL de redirection ;\n3. Accordez l'autorisation « Obtenir les informations de base de l'utilisateur » et publiez une version.",
       "save": "Enregistrer",
       "saved": "Enregistré",

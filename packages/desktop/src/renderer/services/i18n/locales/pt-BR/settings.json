@@ -1476,7 +1476,7 @@
       "signupPolicyHint": "Exigir aprovação: quem entrar com o Feishu pela primeira vez só poderá usar o sistema depois que um administrador ativar a conta na lista de usuários abaixo. As alterações só afetam quem entrar pela primeira vez a partir de agora.",
       "advanced": "Avançado",
       "apiBase": "URL da API do Feishu",
-      "accountsBase": "URL de autorização e token do Feishu",
+      "accountsBase": "URL de autorização do Feishu",
       "guide": "Configuração:\n1. Crie um aplicativo empresarial personalizado na plataforma aberta do Feishu e copie o App ID e o App Secret;\n2. Em Configurações de segurança, adicione a URL de retorno acima como URL de redirecionamento;\n3. Conceda a permissão \"Obter informações básicas do usuário\" e publique uma versão.",
       "save": "Salvar",
       "saved": "Salvo",

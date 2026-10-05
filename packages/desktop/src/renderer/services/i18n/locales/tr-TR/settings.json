@@ -1473,7 +1473,7 @@
       "signupPolicyHint": "Onay gerekli: Feishu ile ilk kez giriş yapan kişiler, bir yönetici onları aşağıdaki kullanıcı listesinde etkinleştirdikten sonra sistemi kullanabilir. Değişiklikler yalnızca bundan sonraki ilk girişleri etkiler.",
       "advanced": "Gelişmiş",
       "apiBase": "Feishu API adresi",
-      "accountsBase": "Feishu yetkilendirme ve token adresi",
+      "accountsBase": "Feishu yetkilendirme adresi",
       "guide": "Kurulum:\n1. Feishu açık platformunda kurumsal özel uygulama oluşturun ve App ID ile App Secret değerlerini kopyalayın;\n2. Güvenlik Ayarları'nda yukarıdaki geri çağırma adresini yönlendirme URL'si olarak ekleyin;\n3. \"Temel kullanıcı bilgilerini al\" iznini verin ve bir sürüm yayımlayın.",
       "save": "Kaydet",
       "saved": "Kaydedildi",
