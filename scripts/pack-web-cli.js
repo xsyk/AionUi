@@ -77,6 +77,17 @@ if (fs.existsSync(rendererOutDir)) {
   throw new Error(`Desktop renderer output not found at ${rendererOutDir}. Run bunx electron-vite build first.`);
 }
 
+// 6b. Copy the image generation MCP script
+console.log('6b. Building and copying image generation MCP script...');
+execSync('node scripts/build-mcp-servers.js', { cwd: projectRoot, stdio: 'inherit' });
+const mcpImageGenSrc = path.join(projectRoot, 'out/main/builtin-mcp-image-gen.js');
+const mcpImageGenDest = path.join(tarballContentDir, 'builtin-mcp/builtin-mcp-image-gen.js');
+if (!fs.existsSync(mcpImageGenSrc)) {
+  throw new Error(`Image generation MCP script not found at ${mcpImageGenSrc}. Ensure build-mcp-servers.js succeeded.`);
+}
+fs.mkdirSync(path.dirname(mcpImageGenDest), { recursive: true });
+fs.copyFileSync(mcpImageGenSrc, mcpImageGenDest);
+
 // 7. Copy bundled-aioncore
 const backendSrc = path.join(projectRoot, 'resources/bundled-aioncore', `${platform}-${arch}`);
 const backendDest = path.join(tarballContentDir, 'bundled-aioncore', `${platform}-${arch}`);
