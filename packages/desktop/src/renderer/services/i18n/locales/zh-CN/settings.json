@@ -1481,5 +1481,15 @@
       "saveFailed": "保存失败",
       "loadFailed": "读取飞书登录配置失败"
     }
+  },
+  "sharedConfig": {
+    "modelsAdmin": "这里配置的模型对所有用户可用。",
+    "modelsReadonly": "模型由管理员统一配置，所有用户都可以使用。",
+    "agentsAdmin": "这里的智能体设置对所有用户生效。",
+    "agentsReadonly": "智能体由管理员统一配置，所有用户都可以使用。",
+    "imageAdmin": "这里选择的图像模型对所有用户生效。",
+    "imageReadonly": "图像模型由管理员统一配置。",
+    "imageUnsupported": "本服务器没有安装图像生成组件。",
+    "serverDirs": "安装时确定，所有用户共用。"
   }
 }

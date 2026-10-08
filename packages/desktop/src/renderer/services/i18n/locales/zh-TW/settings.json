@@ -1482,5 +1482,15 @@
       "saveFailed": "儲存失敗",
       "loadFailed": "讀取飛書登入設定失敗"
     }
+  },
+  "sharedConfig": {
+    "modelsAdmin": "這裡設定的模型對所有使用者可用。",
+    "modelsReadonly": "模型由管理員統一設定，所有使用者都可以使用。",
+    "agentsAdmin": "這裡的智能體設定對所有使用者生效。",
+    "agentsReadonly": "智能體由管理員統一設定，所有使用者都可以使用。",
+    "imageAdmin": "這裡選擇的圖像模型對所有使用者生效。",
+    "imageReadonly": "圖像模型由管理員統一設定。",
+    "imageUnsupported": "本伺服器沒有安裝圖像生成元件。",
+    "serverDirs": "安裝時確定，所有使用者共用。"
   }
 }

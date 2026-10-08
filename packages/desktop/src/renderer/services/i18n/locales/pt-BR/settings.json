@@ -1483,5 +1483,15 @@
       "saveFailed": "Falha ao salvar",
       "loadFailed": "Falha ao carregar as configurações de login do Feishu"
     }
+  },
+  "sharedConfig": {
+    "modelsAdmin": "Os modelos configurados aqui ficam disponíveis para todos os usuários.",
+    "modelsReadonly": "Os modelos são configurados pelo administrador e ficam disponíveis para todos os usuários.",
+    "agentsAdmin": "As configurações de agentes aqui se aplicam a todos os usuários.",
+    "agentsReadonly": "Os agentes são configurados pelo administrador e ficam disponíveis para todos os usuários.",
+    "imageAdmin": "O modelo de imagem escolhido aqui se aplica a todos os usuários.",
+    "imageReadonly": "O modelo de imagem é configurado pelo administrador.",
+    "imageUnsupported": "A geração de imagens não está instalada neste servidor.",
+    "serverDirs": "Definido na instalação e compartilhado por todos os usuários."
   }
 }

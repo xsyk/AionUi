@@ -1480,5 +1480,15 @@
       "saveFailed": "Échec de l'enregistrement",
       "loadFailed": "Impossible de charger les paramètres de connexion Feishu"
     }
+  },
+  "sharedConfig": {
+    "modelsAdmin": "Les modèles configurés ici sont disponibles pour tous les utilisateurs.",
+    "modelsReadonly": "Les modèles sont configurés par l'administrateur et disponibles pour tous les utilisateurs.",
+    "agentsAdmin": "Les paramètres des agents définis ici s'appliquent à tous les utilisateurs.",
+    "agentsReadonly": "Les agents sont configurés par l'administrateur et disponibles pour tous les utilisateurs.",
+    "imageAdmin": "Le modèle d'image choisi ici s'applique à tous les utilisateurs.",
+    "imageReadonly": "Le modèle d'image est configuré par l'administrateur.",
+    "imageUnsupported": "La génération d'images n'est pas installée sur ce serveur.",
+    "serverDirs": "Défini lors de l'installation et partagé par tous les utilisateurs."
   }
 }

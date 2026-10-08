@@ -8,12 +8,20 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IProvider } from '@/common/config/storage';
+import type { DeepLinkAddProviderDetail } from '@/renderer/hooks/system/useDeepLink';
+
+type MockAuthUser = { id: string; is_super_admin?: boolean; username: string };
+
+const ADMIN_USER: MockAuthUser = { id: 'system_default_user', is_super_admin: true, username: 'admin' };
+const REGULAR_USER: MockAuthUser = { id: 'user-2', is_super_admin: false, username: 'bob' };
 
 const mocks = vi.hoisted(() => ({
+  authUser: null as MockAuthUser | null,
   close: vi.fn(),
   createProvider: vi.fn(),
   deleteProvider: vi.fn(),
   editModeOpen: vi.fn(),
+  isDesktop: false,
   availableModels: [
     { label: 'GPT 5.6 Sol', value: 'gpt-5.6-sol' },
     { label: 'Claude Sonnet 4', value: 'claude-sonnet-4' },
@@ -22,11 +30,13 @@ const mocks = vi.hoisted(() => ({
   modelListUnavailable: false,
   mutate: vi.fn(),
   onSubmit: vi.fn(),
+  pendingDeepLink: null as DeepLinkAddProviderDetail | null,
   providerMutate: vi.fn(),
   providers: [] as IProvider[],
   protocolReset: vi.fn(),
   singleModelValue: false,
   updateProvider: vi.fn(),
+  viewMode: 'modal' as 'modal' | 'page',
 }));
 
 function MockSelectOption({ children, value }: { children?: React.ReactNode; value: string }) {
@@ -119,11 +129,24 @@ vi.mock('@/renderer/hooks/agent/useModelProviderList', () => ({
 }));
 
 vi.mock('@/renderer/components/settings/SettingsModal/settingsViewContext', () => ({
-  useSettingsViewMode: () => 'modal',
+  useSettingsViewMode: () => mocks.viewMode,
 }));
 
 vi.mock('@/renderer/hooks/system/useDeepLink', () => ({
-  consumePendingDeepLink: () => null,
+  consumePendingDeepLink: () => {
+    const pending = mocks.pendingDeepLink;
+    mocks.pendingDeepLink = null;
+    return pending;
+  },
+}));
+
+vi.mock('@/renderer/hooks/context/AuthContext', () => ({
+  useAuth: () => ({ user: mocks.authUser }),
+}));
+
+vi.mock('@/renderer/utils/platform', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/renderer/utils/platform')>()),
+  isElectronDesktop: () => mocks.isDesktop,
 }));
 
 vi.mock('@/renderer/components/base/TalkToButlerButton', () => ({
@@ -251,8 +274,22 @@ vi.mock('@arco-design/web-react', async (importOriginal) => {
         ? React.cloneElement(children as React.ReactElement<{ onClick?: () => void }>, { onClick: onOk })
         : children,
     Select: Object.assign(MockSelect, { Option: MockSelectOption }),
-    Switch: ({ checked, onChange }: { checked?: boolean; onChange?: (checked: boolean) => void }) => (
-      <button type='button' role='switch' aria-checked={checked} onClick={() => onChange?.(!checked)}>
+    Switch: ({
+      checked,
+      disabled,
+      onChange,
+    }: {
+      checked?: boolean;
+      disabled?: boolean;
+      onChange?: (checked: boolean) => void;
+    }) => (
+      <button
+        type='button'
+        role='switch'
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange?.(!checked)}
+      >
         switch
       </button>
     ),
@@ -278,6 +315,14 @@ const provider = (overrides: Partial<IProvider> = {}): IProvider => ({
   name: 'OpenAI compatible',
   platform: 'openai',
   ...overrides,
+});
+
+beforeEach(() => {
+  // Default to the administrator in the modal view: the same controls the desktop app shows.
+  mocks.authUser = ADMIN_USER;
+  mocks.isDesktop = false;
+  mocks.pendingDeepLink = null;
+  mocks.viewMode = 'modal';
 });
 
 describe('supportsOpenAiApiMode', () => {
@@ -655,5 +700,155 @@ describe('configured model list', () => {
         })
       );
     });
+  });
+});
+
+describe('shared model configuration', () => {
+  // The server returns a blank API key to non-admin users, so the fixture is keyless on purpose.
+  const sharedProvider = provider({
+    api_key: '',
+    id: 'shared-1',
+    model_protocols: { 'claude-direct': 'anthropic', 'gpt-4o': 'openai' },
+    models: ['gpt-4o', 'claude-direct'],
+    name: 'Shared gateway',
+    platform: 'new-api',
+  });
+  const managementButtons = ['add-model', 'remove-provider', 'edit-provider', 'configure', 'health', 'delete'];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.providers.splice(0, mocks.providers.length, sharedProvider);
+    mocks.updateProvider.mockResolvedValue(sharedProvider);
+  });
+
+  it('tells administrators the models apply to everyone and keeps every management control', () => {
+    mocks.providers.splice(0, mocks.providers.length, { ...sharedProvider, api_key: 'test-key' });
+    render(<ModelModalContent />);
+
+    expect(screen.getByText('settings.sharedConfig.modelsAdmin')).toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.modelsReadonly')).not.toBeInTheDocument();
+    expect(screen.getByText('settings.addModel')).toBeInTheDocument();
+    expect(screen.getByText('settings.clearStatus')).toBeInTheDocument();
+    expect(screen.getByText(/settings\.apiKeyCount/)).toBeInTheDocument();
+    expect(screen.getByText('2 / 1')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'add-model' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'remove-provider' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'edit-provider' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'configure' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'health' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'delete' })).toHaveLength(2);
+
+    const switches = screen.getAllByRole('switch');
+    expect(switches).toHaveLength(3);
+    switches.forEach((toggle) => expect(toggle).toBeEnabled());
+  });
+
+  it('shows non-admin users a read-only notice and none of the management controls', () => {
+    mocks.authUser = REGULAR_USER;
+    render(<ModelModalContent />);
+
+    expect(screen.getByText('settings.sharedConfig.modelsReadonly')).toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.modelsAdmin')).not.toBeInTheDocument();
+
+    expect(screen.queryByText('settings.addModel')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.clearStatus')).not.toBeInTheDocument();
+    managementButtons.forEach((name) => {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    });
+
+    // The blank key would otherwise read as "API Key (0)" - the count is hidden, not shown as zero.
+    expect(screen.queryByText(/settings\.apiKeyCount/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d+ \/ \d+/)).not.toBeInTheDocument();
+
+    const switches = screen.getAllByRole('switch');
+    expect(switches).toHaveLength(3);
+    switches.forEach((toggle) => expect(toggle).toBeDisabled());
+  });
+
+  it('still lists the shared providers and their models to non-admin users', () => {
+    mocks.authUser = REGULAR_USER;
+    render(<ModelModalContent />);
+
+    expect(screen.getByText('Shared gateway')).toBeInTheDocument();
+    expect(screen.getByText(/settings\.modelCount/)).toBeInTheDocument();
+    expect(screen.getByText('gpt-4o')).toBeInTheDocument();
+    expect(screen.getByText('claude-direct')).toBeInTheDocument();
+    expect(screen.getByText('Anthropic')).toBeInTheDocument();
+  });
+
+  it('does not save anything when a non-admin user clicks a switch or a protocol label', () => {
+    mocks.authUser = REGULAR_USER;
+    render(<ModelModalContent />);
+
+    screen.getAllByRole('switch').forEach((toggle) => fireEvent.click(toggle));
+    fireEvent.click(screen.getByText('Anthropic'));
+
+    expect(mocks.updateProvider).not.toHaveBeenCalled();
+    expect(mocks.createProvider).not.toHaveBeenCalled();
+    expect(mocks.deleteProvider).not.toHaveBeenCalled();
+    expect(mocks.providerMutate).not.toHaveBeenCalled();
+  });
+
+  it('lets administrators cycle a model protocol', async () => {
+    render(<ModelModalContent />);
+
+    fireEvent.click(screen.getByText('Anthropic'));
+
+    await waitFor(() => {
+      expect(mocks.updateProvider).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'shared-1',
+          model_protocols: { 'claude-direct': 'openai', 'gpt-4o': 'openai' },
+        })
+      );
+    });
+  });
+
+  it('keeps full control in the desktop app, which has no signed-in user', () => {
+    mocks.authUser = null;
+    mocks.isDesktop = true;
+    render(<ModelModalContent />);
+
+    expect(screen.getByText('settings.sharedConfig.modelsAdmin')).toBeInTheDocument();
+    expect(screen.getByText('settings.addModel')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'delete' })).toHaveLength(2);
+    screen.getAllByRole('switch').forEach((toggle) => expect(toggle).toBeEnabled());
+  });
+
+  it('shows the notice under the page header and no header actions to non-admin users', () => {
+    mocks.authUser = REGULAR_USER;
+    mocks.viewMode = 'page';
+    render(<ModelModalContent />);
+
+    expect(screen.getByTestId('model-header')).toBeInTheDocument();
+    expect(screen.getByText('settings.sharedConfig.modelsReadonly')).toBeInTheDocument();
+    expect(screen.queryByText('settings.addModel')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.clearStatus')).not.toBeInTheDocument();
+  });
+
+  it('keeps the page header actions for administrators', () => {
+    mocks.viewMode = 'page';
+    render(<ModelModalContent />);
+
+    expect(screen.getByTestId('model-header')).toBeInTheDocument();
+    expect(screen.getByText('settings.sharedConfig.modelsAdmin')).toBeInTheDocument();
+    expect(screen.getByText('settings.addModel')).toBeInTheDocument();
+    expect(screen.getByText('settings.clearStatus')).toBeInTheDocument();
+  });
+
+  it('opens a pending add-provider deep link for administrators', async () => {
+    mocks.pendingDeepLink = { api_key: 'sk-test', base_url: 'https://api.example.com/v1', platform: 'OpenAI' };
+    render(<ModelModalContent />);
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('consumes a pending add-provider deep link without opening it for non-admin users', () => {
+    mocks.authUser = REGULAR_USER;
+    mocks.pendingDeepLink = { api_key: 'sk-test', base_url: 'https://api.example.com/v1', platform: 'OpenAI' };
+    render(<ModelModalContent />);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.pendingDeepLink).toBeNull();
   });
 });

@@ -1480,5 +1480,15 @@
       "saveFailed": "Kaydedilemedi",
       "loadFailed": "Feishu giriş ayarları yüklenemedi"
     }
+  },
+  "sharedConfig": {
+    "modelsAdmin": "Burada yapılandırılan modeller tüm kullanıcılar tarafından kullanılabilir.",
+    "modelsReadonly": "Modeller yönetici tarafından yapılandırılır ve tüm kullanıcılar tarafından kullanılabilir.",
+    "agentsAdmin": "Buradaki ajan ayarları tüm kullanıcılar için geçerlidir.",
+    "agentsReadonly": "Ajanlar yönetici tarafından yapılandırılır ve tüm kullanıcılar tarafından kullanılabilir.",
+    "imageAdmin": "Burada seçilen görüntü modeli tüm kullanıcılar için geçerlidir.",
+    "imageReadonly": "Görüntü modeli yönetici tarafından yapılandırılır.",
+    "imageUnsupported": "Bu sunucuda görüntü oluşturma bileşeni kurulu değil.",
+    "serverDirs": "Kurulum sırasında belirlenir ve tüm kullanıcılar tarafından paylaşılır."
   }
 }

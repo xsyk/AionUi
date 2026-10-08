@@ -1480,5 +1480,15 @@
       "saveFailed": "Speichern fehlgeschlagen",
       "loadFailed": "Feishu-Anmeldeeinstellungen konnten nicht geladen werden"
     }
+  },
+  "sharedConfig": {
+    "modelsAdmin": "Hier konfigurierte Modelle stehen allen Benutzern zur Verfügung.",
+    "modelsReadonly": "Modelle werden vom Administrator konfiguriert und stehen allen Benutzern zur Verfügung.",
+    "agentsAdmin": "Die Agenten-Einstellungen hier gelten für alle Benutzer.",
+    "agentsReadonly": "Agenten werden vom Administrator konfiguriert und stehen allen Benutzern zur Verfügung.",
+    "imageAdmin": "Das hier gewählte Bildmodell gilt für alle Benutzer.",
+    "imageReadonly": "Das Bildmodell wird vom Administrator konfiguriert.",
+    "imageUnsupported": "Auf diesem Server ist die Bildgenerierung nicht installiert.",
+    "serverDirs": "Bei der Installation festgelegt und von allen Benutzern gemeinsam genutzt."
   }
 }

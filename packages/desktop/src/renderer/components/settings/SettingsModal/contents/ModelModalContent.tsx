@@ -31,6 +31,8 @@ import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import { useProvidersQuery } from '@/renderer/hooks/agent/useModelProviderList';
 import { useSettingsViewMode } from '../settingsViewContext';
 import SettingsPageHeader from '@/renderer/pages/settings/components/SettingsPageHeader';
+import SharedConfigNotice from '@/renderer/components/settings/SharedConfigNotice';
+import { useCanManageSharedConfig } from '@/renderer/hooks/system/useCanManageSharedConfig';
 import { consumePendingDeepLink } from '@/renderer/hooks/system/useDeepLink';
 import '../model-provider.css';
 
@@ -110,6 +112,8 @@ const ModelModalContent: React.FC = () => {
   const { t, i18n } = useTranslation();
   const viewMode = useSettingsViewMode();
   const isPageMode = viewMode === 'page';
+  // Providers are shared by every user: only the admin can change them, others get a read-only list.
+  const canManage = useCanManageSharedConfig();
   const [collapseKey, setCollapseKey] = useState<Record<string, boolean>>({});
   const [healthCheckLoading, setHealthCheckLoading] = useState<Record<string, boolean>>({});
   const { data, mutate } = useProvidersQuery();
@@ -314,13 +318,14 @@ const ModelModalContent: React.FC = () => {
     },
   });
 
-  // Consume pending deep-link data on mount (set by useDeepLink hook before navigation)
+  // Consume pending deep-link data on mount (set by useDeepLink hook before navigation).
+  // Always consume it, but only the admin may act on it: adding a provider is an admin-only write.
   useEffect(() => {
     const pending = consumePendingDeepLink();
-    if (pending) {
+    if (pending && canManage) {
       addPlatformModalCtrl.open({ deepLinkData: pending });
     }
-  }, [addPlatformModalCtrl]);
+  }, [addPlatformModalCtrl, canManage]);
 
   const [addModelModalCtrl, addModelModalContext] = AddModelModal.useModal({
     onSubmit(platform) {
@@ -337,7 +342,8 @@ const ModelModalContent: React.FC = () => {
     },
   });
 
-  const headerActions = (
+  // Clearing health data and adding a provider both write shared config, so only the admin gets them.
+  const headerActions = canManage ? (
     <>
       <Button type='text' size='small' onClick={clearAllHealthData} className='!text-t-secondary hover:!text-t-primary'>
         {t('settings.clearStatus')}
@@ -352,7 +358,7 @@ const ModelModalContent: React.FC = () => {
         })}
       />
     </>
-  );
+  ) : undefined;
 
   const supportNote = (
     <div
@@ -365,6 +371,14 @@ const ModelModalContent: React.FC = () => {
     >
       {t('settings.customModelSupportNote')}
     </div>
+  );
+
+  const sharedConfigNotice = (
+    <SharedConfigNotice
+      canManage={canManage}
+      adminText={t('settings.sharedConfig.modelsAdmin')}
+      readonlyText={t('settings.sharedConfig.modelsReadonly')}
+    />
   );
 
   return (
@@ -381,22 +395,26 @@ const ModelModalContent: React.FC = () => {
       {addModelModalContext}
 
       {isPageMode ? (
-        <SettingsPageHeader
-          data-testid='model-header'
-          title={t('settings.model')}
-          description={t('settings.modelDescription', {
-            defaultValue: 'Configure LLM providers and API keys for use across all assistants.',
-          })}
-          actions={headerActions}
-        />
+        <>
+          <SettingsPageHeader
+            data-testid='model-header'
+            title={t('settings.model')}
+            description={t('settings.modelDescription', {
+              defaultValue: 'Configure LLM providers and API keys for use across all assistants.',
+            })}
+            actions={headerActions}
+          />
+          {sharedConfigNotice}
+        </>
       ) : (
         /* Modal mode keeps its compact self-contained header. */
         <div className='flex-shrink-0 border-b border-[var(--color-border-2)] pb-12px mb-14px flex flex-col gap-10px'>
           <div className='flex items-center justify-between gap-8px flex-wrap'>
             <div className='text-20px font-600 text-t-primary leading-34px'>{t('settings.model')}</div>
-            <div className='flex items-center gap-8px flex-wrap'>{headerActions}</div>
+            {headerActions && <div className='flex items-center gap-8px flex-wrap'>{headerActions}</div>}
           </div>
           {supportNote}
+          {sharedConfigNotice}
         </div>
       )}
 
@@ -466,47 +484,56 @@ const ModelModalContent: React.FC = () => {
                             >
                               {t('settings.modelCount')}（{(platform.models ?? []).length}）
                             </span>
-                            <span className='mx-6px'>|</span>
-                            <span
-                              className='cursor-pointer hover:text-t-primary transition-colors'
-                              onClick={() => editModalCtrl.open({ data: platform })}
-                            >
-                              {t('settings.apiKeyCount')}（{getApiKeyCount(platform.api_key)}）
-                            </span>
+                            {/* API keys are admin-only: non-admins get blank keys from the server, so a count would read "0". */}
+                            {canManage && (
+                              <>
+                                <span className='mx-6px'>|</span>
+                                <span
+                                  className='cursor-pointer hover:text-t-primary transition-colors'
+                                  onClick={() => editModalCtrl.open({ data: platform })}
+                                >
+                                  {t('settings.apiKeyCount')}（{getApiKeyCount(platform.api_key)}）
+                                </span>
+                              </>
+                            )}
                           </span>
                           <span className='text-12px text-t-secondary whitespace-nowrap md:hidden'>
-                            {(platform.models ?? []).length} / {getApiKeyCount(platform.api_key)}
+                            {(platform.models ?? []).length}
+                            {canManage && ` / ${getApiKeyCount(platform.api_key)}`}
                           </span>
                           {/* 供应商启用开关 / Provider enable switch */}
                           <Switch
                             size='small'
                             checked={getProviderState(platform).checked}
+                            disabled={!canManage}
                             onChange={() => toggleProviderEnabled(platform)}
                           />
-                          <div className='flex items-center gap-4px'>
-                            <Button
-                              size='mini'
-                              className='model-provider-action-btn !w-28px !h-28px !min-w-28px text-t-secondary hover:text-t-primary'
-                              icon={<Plus size='14' />}
-                              onClick={() => addModelModalCtrl.open({ data: platform })}
-                            />
-                            <Popconfirm
-                              title={t('settings.deleteAllModelConfirm')}
-                              onOk={() => removePlatform(platform.id)}
-                            >
+                          {canManage && (
+                            <div className='flex items-center gap-4px'>
                               <Button
                                 size='mini'
                                 className='model-provider-action-btn !w-28px !h-28px !min-w-28px text-t-secondary hover:text-t-primary'
-                                icon={<Minus size='14' />}
+                                icon={<Plus size='14' />}
+                                onClick={() => addModelModalCtrl.open({ data: platform })}
                               />
-                            </Popconfirm>
-                            <Button
-                              size='mini'
-                              className='model-provider-action-btn !w-28px !h-28px !min-w-28px text-t-secondary hover:text-t-primary'
-                              icon={<Write size='14' />}
-                              onClick={() => editModalCtrl.open({ data: platform })}
-                            />
-                          </div>
+                              <Popconfirm
+                                title={t('settings.deleteAllModelConfirm')}
+                                onOk={() => removePlatform(platform.id)}
+                              >
+                                <Button
+                                  size='mini'
+                                  className='model-provider-action-btn !w-28px !h-28px !min-w-28px text-t-secondary hover:text-t-primary'
+                                  icon={<Minus size='14' />}
+                                />
+                              </Popconfirm>
+                              <Button
+                                size='mini'
+                                className='model-provider-action-btn !w-28px !h-28px !min-w-28px text-t-secondary hover:text-t-primary'
+                                icon={<Write size='14' />}
+                                onClick={() => editModalCtrl.open({ data: platform })}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     }
@@ -559,18 +586,22 @@ const ModelModalContent: React.FC = () => {
 
                               <span className='min-w-0 flex-1 truncate text-14px text-t-primary'>{model}</span>
 
-                              {/* New API 协议标签（点击循环切换）/ New API protocol badge (click to cycle) */}
+                              {/* New API 协议标签（管理员点击循环切换，其他人只读）/ New API protocol badge (admin clicks to cycle, read-only otherwise) */}
                               {isNewApiProvider && (
                                 <Tag
                                   size='small'
                                   color={getProtocolColor(modelProtocol)}
-                                  className='shrink-0 cursor-pointer select-none'
-                                  onClick={() => {
-                                    const nextProtocol = getNextProtocol(modelProtocol);
-                                    const newProtocols = { ...platform.model_protocols };
-                                    newProtocols[model] = nextProtocol;
-                                    updatePlatform({ ...platform, model_protocols: newProtocols }, () => {});
-                                  }}
+                                  className={canManage ? 'shrink-0 cursor-pointer select-none' : 'shrink-0 select-none'}
+                                  onClick={
+                                    canManage
+                                      ? () => {
+                                          const nextProtocol = getNextProtocol(modelProtocol);
+                                          const newProtocols = { ...platform.model_protocols };
+                                          newProtocols[model] = nextProtocol;
+                                          updatePlatform({ ...platform, model_protocols: newProtocols }, () => {});
+                                        }
+                                      : undefined
+                                  }
                                 >
                                   {getProtocolLabel(modelProtocol)}
                                 </Tag>
@@ -613,67 +644,72 @@ const ModelModalContent: React.FC = () => {
                                 className='shrink-0'
                                 size='small'
                                 checked={isModelEnabled(platform, model)}
+                                disabled={!canManage}
                                 onChange={(checked) => toggleModelEnabled(platform, model, checked)}
                               />
                             </div>
 
-                            <div className='flex items-center gap-6px shrink-0'>
-                              <Tooltip content={t('settings.configureModel')}>
-                                <Button
-                                  size='mini'
-                                  className='!w-28px !h-28px !min-w-28px !bg-[var(--color-bg-1)] text-t-secondary hover:text-t-primary hover:!bg-[var(--fill-0)]'
-                                  icon={<SettingTwo theme='outline' size='16' />}
-                                  onClick={() => addModelModalCtrl.open({ data: platform, model })}
-                                />
-                              </Tooltip>
+                            {canManage && (
+                              <div className='flex items-center gap-6px shrink-0'>
+                                <Tooltip content={t('settings.configureModel')}>
+                                  <Button
+                                    size='mini'
+                                    className='!w-28px !h-28px !min-w-28px !bg-[var(--color-bg-1)] text-t-secondary hover:text-t-primary hover:!bg-[var(--fill-0)]'
+                                    icon={<SettingTwo theme='outline' size='16' />}
+                                    onClick={() => addModelModalCtrl.open({ data: platform, model })}
+                                  />
+                                </Tooltip>
 
-                              {/* 心跳检测按钮 / Health check button */}
-                              <Tooltip content={t('settings.healthCheck')}>
-                                <Button
-                                  size='mini'
-                                  className='!w-28px !h-28px !min-w-28px !bg-[var(--color-bg-1)] text-t-secondary hover:text-t-primary hover:!bg-[var(--fill-0)]'
-                                  icon={<Heartbeat theme='outline' size='16' />}
-                                  loading={healthCheckLoading[`${platform.id}-${model}`]}
-                                  onClick={() => performHealthCheck(platform, model)}
-                                />
-                              </Tooltip>
+                                {/* 心跳检测按钮 / Health check button */}
+                                <Tooltip content={t('settings.healthCheck')}>
+                                  <Button
+                                    size='mini'
+                                    className='!w-28px !h-28px !min-w-28px !bg-[var(--color-bg-1)] text-t-secondary hover:text-t-primary hover:!bg-[var(--fill-0)]'
+                                    icon={<Heartbeat theme='outline' size='16' />}
+                                    loading={healthCheckLoading[`${platform.id}-${model}`]}
+                                    onClick={() => performHealthCheck(platform, model)}
+                                  />
+                                </Tooltip>
 
-                              <Popconfirm
-                                title={t('settings.deleteModelConfirm')}
-                                onOk={() => {
-                                  const newModels = platform.models.filter((item: string) => item !== model);
-                                  // 同时清理模型相关状态，避免删除后重加模型时复用脏状态
-                                  // Clean all per-model state to avoid stale state on re-add.
-                                  const newProtocols = { ...platform.model_protocols };
-                                  const newModelEnabled = { ...platform.model_enabled };
-                                  const newModelHealth = { ...platform.model_health };
-                                  const newModelSettings = { ...platform.model_settings };
-                                  delete newProtocols[model];
-                                  delete newModelEnabled[model];
-                                  delete newModelHealth[model];
-                                  delete newModelSettings[model];
+                                <Popconfirm
+                                  title={t('settings.deleteModelConfirm')}
+                                  onOk={() => {
+                                    const newModels = platform.models.filter((item: string) => item !== model);
+                                    // 同时清理模型相关状态，避免删除后重加模型时复用脏状态
+                                    // Clean all per-model state to avoid stale state on re-add.
+                                    const newProtocols = { ...platform.model_protocols };
+                                    const newModelEnabled = { ...platform.model_enabled };
+                                    const newModelHealth = { ...platform.model_health };
+                                    const newModelSettings = { ...platform.model_settings };
+                                    delete newProtocols[model];
+                                    delete newModelEnabled[model];
+                                    delete newModelHealth[model];
+                                    delete newModelSettings[model];
 
-                                  updatePlatform(
-                                    {
-                                      ...platform,
-                                      models: newModels,
-                                      model_protocols: Object.keys(newProtocols).length > 0 ? newProtocols : undefined,
-                                      model_enabled:
-                                        Object.keys(newModelEnabled).length > 0 ? newModelEnabled : undefined,
-                                      model_health: Object.keys(newModelHealth).length > 0 ? newModelHealth : undefined,
-                                      model_settings: newModelSettings,
-                                    },
-                                    () => {}
-                                  );
-                                }}
-                              >
-                                <Button
-                                  size='mini'
-                                  className='!w-28px !h-28px !min-w-28px !bg-[var(--color-bg-1)] text-t-secondary hover:text-t-primary hover:!bg-[var(--fill-0)]'
-                                  icon={<DeleteFour theme='outline' size='18' strokeWidth={2} />}
-                                />
-                              </Popconfirm>
-                            </div>
+                                    updatePlatform(
+                                      {
+                                        ...platform,
+                                        models: newModels,
+                                        model_protocols:
+                                          Object.keys(newProtocols).length > 0 ? newProtocols : undefined,
+                                        model_enabled:
+                                          Object.keys(newModelEnabled).length > 0 ? newModelEnabled : undefined,
+                                        model_health:
+                                          Object.keys(newModelHealth).length > 0 ? newModelHealth : undefined,
+                                        model_settings: newModelSettings,
+                                      },
+                                      () => {}
+                                    );
+                                  }}
+                                >
+                                  <Button
+                                    size='mini'
+                                    className='!w-28px !h-28px !min-w-28px !bg-[var(--color-bg-1)] text-t-secondary hover:text-t-primary hover:!bg-[var(--fill-0)]'
+                                    icon={<DeleteFour theme='outline' size='18' strokeWidth={2} />}
+                                  />
+                                </Popconfirm>
+                              </div>
+                            )}
                           </div>
                           {index < arr.length - 1 && <Divider className='!my-0 !border-[var(--color-border-2)]/70' />}
                         </div>
