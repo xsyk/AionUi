@@ -506,7 +506,14 @@ main() {
         update_shell_profile
     fi
 
-    # Step 8: Print summary
+    # Step 8: Decide the work/log directories now (as the installing user). As
+    # root we leave it to the service's first start so the directories end up
+    # owned by the account that runs it.
+    if [ "$(id -u)" != "0" ]; then
+        "$INSTALL_DIR/aionui-web" init-dirs || warn "init-dirs failed; the first start will retry"
+    fi
+
+    # Step 9: Print summary
     print_summary
 }
 

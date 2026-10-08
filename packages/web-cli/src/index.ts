@@ -7,6 +7,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openBrowserUrl, shouldAutoOpenBrowser } from './browser.js';
 import { ensureAdminPassword } from './ensureAdminPassword.js';
+import { DEFAULT_WORK_DIR, INSTALL_DIRS_FILE, resolveInstallDirs } from './installDirs.js';
+import type { InstallDirs } from './installDirs.js';
 
 // tarball layout:
 //   aionui-web/
@@ -97,12 +99,50 @@ function resolveDataDir(flags: Map<string, string | true>): string {
   return path.join(os.homedir(), '.aionui-web');
 }
 
-function resolveLogDir(flags: Map<string, string | true>, dataDir: string): string {
+/** Explicit work dir only (`--work-dir`, `AIONUI_WORK_DIR`); the default comes from resolveInstallDirs. */
+function resolveWorkDirFlag(flags: Map<string, string | true>): string | undefined {
+  const override = flags.get('work-dir');
+  if (typeof override === 'string') return path.resolve(override);
+  const envOverride = process.env.AIONUI_WORK_DIR;
+  if (envOverride) return path.resolve(envOverride);
+  return undefined;
+}
+
+/** Explicit log dir only (`--log-dir`, `AIONUI_LOG_DIR`); the default comes from resolveInstallDirs. */
+function resolveLogDir(flags: Map<string, string | true>): string | undefined {
   const override = flags.get('log-dir');
   if (typeof override === 'string') return path.resolve(override);
   const envOverride = process.env.AIONUI_LOG_DIR;
   if (envOverride) return path.resolve(envOverride);
-  return path.join(dataDir, 'logs');
+  return undefined;
+}
+
+/**
+ * Work and log dirs for this run: explicit flags/env first, otherwise what was
+ * decided at install time (see installDirs.ts). Both directories exist on return.
+ */
+function resolveWorkAndLogDirs(flags: Map<string, string | true>, dataDir: string): InstallDirs {
+  const dirs = resolveInstallDirs({
+    dataDir,
+    homeDir: os.homedir(),
+    explicitWorkDir: resolveWorkDirFlag(flags),
+    explicitLogDir: resolveLogDir(flags),
+  });
+  fs.mkdirSync(dirs.workDir, { recursive: true });
+  fs.mkdirSync(dirs.logDir, { recursive: true });
+  return dirs;
+}
+
+/**
+ * The image-generation MCP server ships next to the binary (builtin-mcp/). Tell
+ * the backend where it is, unless the operator already pointed it elsewhere; the
+ * web host hands process.env on to aioncore.
+ */
+function exposeBundledImageGenScript(): void {
+  const imageGenScript = path.join(cliRoot, 'builtin-mcp', 'builtin-mcp-image-gen.js');
+  if (!process.env.AIONUI_IMAGE_GEN_MCP_SCRIPT && fs.existsSync(imageGenScript)) {
+    process.env.AIONUI_IMAGE_GEN_MCP_SCRIPT = imageGenScript;
+  }
 }
 
 function resolvePort(flags: Map<string, string | true>): number {
@@ -135,8 +175,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
   const staticDir = resolveStaticDir(flags);
   const dataDir = resolveDataDir(flags);
   fs.mkdirSync(dataDir, { recursive: true });
-  const logDir = resolveLogDir(flags, dataDir);
-  fs.mkdirSync(logDir, { recursive: true });
+  const { workDir, logDir, source } = resolveWorkAndLogDirs(flags, dataDir);
   const port = resolvePort(flags);
   const allowRemote = resolveAllowRemote(flags);
   const version = readPackageVersion();
@@ -155,6 +194,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
 
   console.log(`[aionui-web] version    : ${version}`);
   console.log(`[aionui-web] data dir   : ${dataDir}`);
+  console.log(`[aionui-web] work dir   : ${workDir} (${source})`);
   console.log(`[aionui-web] log dir    : ${logDir}`);
   console.log(`[aionui-web] static dir : ${staticDir}`);
   console.log(`[aionui-web] backend bin: ${backendBin}`);
@@ -196,6 +236,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
     console.log('');
     console.log('Press Ctrl+C to stop.');
   } else {
+    exposeBundledImageGenScript();
     const handle = await startWebHost({
       app: {
         version,
@@ -210,7 +251,7 @@ async function runStart(flags: Map<string, string | true>): Promise<void> {
       logDir,
       dirs: {
         cacheDir: dataDir,
-        workDir: dataDir,
+        workDir,
         logDir,
       },
       backend: {
@@ -284,13 +325,13 @@ async function runResetPassword(flags: Map<string, string | true>): Promise<void
   }
   const dataDir = resolveDataDir(flags);
   fs.mkdirSync(dataDir, { recursive: true });
-  const logDir = resolveLogDir(flags, dataDir);
-  fs.mkdirSync(logDir, { recursive: true });
+  const { workDir, logDir } = resolveWorkAndLogDirs(flags, dataDir);
   const staticDir = resolveStaticDir(flags);
   const version = readPackageVersion();
 
   console.log(`[aionui-web] resetting admin password in ${dataDir}`);
 
+  exposeBundledImageGenScript();
   const handle = await startWebHost({
     app: {
       version,
@@ -306,7 +347,7 @@ async function runResetPassword(flags: Map<string, string | true>): Promise<void
     allowRemote: false,
     dataDir,
     logDir,
-    dirs: { cacheDir: dataDir, workDir: dataDir, logDir },
+    dirs: { cacheDir: dataDir, workDir, logDir },
     backend: { kind: 'ownBackend', resolveBackend: () => backendBin },
   });
   currentHandle = handle;
@@ -363,6 +404,29 @@ async function runResetPassword(flags: Map<string, string | true>): Promise<void
   }
 }
 
+/**
+ * `aionui-web init-dirs` — decide and create the work and log directories now,
+ * and remember the choice in <data-dir>/install-dirs.json. install-web.sh runs
+ * this right after installing (as the installing user); the first `start` does
+ * the same when it was never run. Prints where things ended up, then exits.
+ */
+function runInitDirs(flags: Map<string, string | true>): void {
+  const dataDir = resolveDataDir(flags);
+  fs.mkdirSync(dataDir, { recursive: true });
+  const { workDir, logDir, source } = resolveWorkAndLogDirs(flags, dataDir);
+
+  console.log(`[aionui-web] data dir   : ${dataDir}`);
+  console.log(`[aionui-web] work dir   : ${workDir} (${source})`);
+  console.log(`[aionui-web] log dir    : ${logDir}`);
+  if (source === 'installed-home-fallback') {
+    console.warn(`[aionui-web] could not create ${DEFAULT_WORK_DIR} (no permission, or read-only), using ${workDir}.`);
+    console.warn(
+      `[aionui-web] to use ${DEFAULT_WORK_DIR} instead: create it for this account, delete ` +
+        `${path.join(dataDir, INSTALL_DIRS_FILE)}, then run init-dirs again.`
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const { command, flags } = parseArgs(process.argv.slice(2));
 
@@ -376,6 +440,7 @@ async function main(): Promise<void> {
 
 Commands:
   start              Start the WebUI (default)
+  init-dirs          Decide and create the work and log directories, then exit
   resetpass          Reset the admin password and print the new one
   version            Print version
   help               Show this help
@@ -386,17 +451,27 @@ Options for start:
   --open                  Force opening the local URL in a browser
   --no-open               Disable automatic browser opening
   --data-dir <path>       Override data dir (default: ~/.aionui-web)
-  --log-dir <path>        Override log dir (default: <data-dir>/logs)
+  --work-dir <path>       Override work dir (default: ${DEFAULT_WORK_DIR},
+                          or ~/.AionEasiful when that cannot be created for lack of permission)
+  --log-dir <path>        Override log dir (default: <work-dir>/logs)
   --static-dir <path>     Override static assets dir
   --backend-bin <path>    Override backend binary path
+
+Options for init-dirs:
+  --data-dir <path>       Data dir that remembers the choice (default: ~/.aionui-web)
+  --work-dir <path>       Use this work dir instead (nothing is remembered)
+  --log-dir <path>        Use this log dir instead
 
 Options for resetpass:
   --data-dir <path>       Which data dir to reset (default: ~/.aionui-web)
   --backend-bin <path>    Override backend binary path
 
+The work and log directories are chosen once, by init-dirs or on the first start,
+and remembered in <data-dir>/${INSTALL_DIRS_FILE}.
+
 Environment variables:
-  AIONUI_PORT, AIONUI_ALLOW_REMOTE, AIONUI_DATA_DIR, AIONUI_LOG_DIR,
-  AIONUI_BACKEND_BIN, AIONUI_OPEN_BROWSER
+  AIONUI_PORT, AIONUI_ALLOW_REMOTE, AIONUI_DATA_DIR, AIONUI_WORK_DIR,
+  AIONUI_LOG_DIR, AIONUI_BACKEND_BIN, AIONUI_OPEN_BROWSER
 `);
     return;
   }
@@ -406,9 +481,14 @@ Environment variables:
     return;
   }
 
+  if (command === 'init-dirs') {
+    runInitDirs(flags);
+    return;
+  }
+
   if (command !== 'start') {
     console.error(`Unknown command: ${command}`);
-    console.error('Usage: aionui-web [start|resetpass|version|help]');
+    console.error('Usage: aionui-web [start|init-dirs|resetpass|version|help]');
     process.exit(1);
   }
 
