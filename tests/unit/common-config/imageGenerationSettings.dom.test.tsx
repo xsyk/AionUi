@@ -328,6 +328,15 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
       ]);
     });
 
+    it('lists the OpenAI Images models among the supported ones in the hint next to the selector', async () => {
+      await renderLoaded();
+
+      fireEvent.mouseEnter(document.querySelector('.arco-form-item-tooltip')!);
+
+      const hint = await screen.findByRole('tooltip');
+      expect(hint).toHaveTextContent('settings.imageGenSupportedTooltipOpenAI');
+    });
+
     it('saves the chosen model through the shared setting and keeps the switch as it was', async () => {
       await renderLoaded();
 

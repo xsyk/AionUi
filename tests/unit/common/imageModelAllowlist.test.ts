@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { isImageGenSupported, isOpenAiImagesModel } from '@/common/utils/imageModelAllowlist';
 
@@ -129,5 +131,39 @@ describe('isImageGenSupported for OpenAI Images API models', () => {
   it('rejects OpenAI models that are not image models', () => {
     const provider = { platform: 'openai', name: 'OpenAI' };
     expect(isImageGenSupported(provider, 'gpt-4o')).toBe(false);
+  });
+});
+
+/**
+ * The hint next to the image model selector says which models the tool supports. It must agree with the allowlist
+ * above in every locale, or administrators are told the models they actually configured cannot be used.
+ */
+describe('the image model hint in Settings > Tools', () => {
+  const LOCALES_DIR = path.resolve(__dirname, '../../../packages/desktop/src/renderer/services/i18n/locales');
+  const locales = fs
+    .readdirSync(LOCALES_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .toSorted();
+  const readHint = (locale: string): Record<string, string> =>
+    JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, locale, 'settings.json'), 'utf-8'));
+
+  it('ships every supported locale', () => {
+    expect(locales.length).toBeGreaterThanOrEqual(13);
+  });
+
+  it.each(locales)('%s lists the OpenAI Images models as supported', (locale) => {
+    const supported = readHint(locale).imageGenSupportedTooltipOpenAI;
+
+    expect(supported, `${locale} imageGenSupportedTooltipOpenAI missing`).toBeTruthy();
+    expect(supported).toContain('gpt-image-*');
+    expect(supported).toContain('dall-e-*');
+  });
+
+  it.each(locales)('%s no longer lists them as unsupported', (locale) => {
+    const unsupported = readHint(locale).imageGenUnsupportedTooltip;
+
+    expect(unsupported, `${locale} imageGenUnsupportedTooltip missing`).toBeTruthy();
+    expect(unsupported).not.toMatch(/gpt-image|dall-e/i);
   });
 });
