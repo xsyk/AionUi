@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - ورود",
   "brand": "AionEasiful",
-  "subtitle": "خوش آمدید، لطفاً به حساب خود وارد شوید",
+  "subtitle": "به {{appName}} خوش آمدید",
+  "passwordTitle": "ورود با رمز عبور",
   "username": "نام کاربری",
-  "usernamePlaceholder": "نام کاربری خود را وارد کنید",
   "password": "رمز عبور",
-  "passwordPlaceholder": "رمز عبور خود را وارد کنید",
   "rememberMe": "مرا به خاطر بسپار",
   "submit": "ورود",
   "submitting": "در حال ورود...",
@@ -13,8 +12,6 @@
   "showPassword": "نمایش رمز عبور",
   "hidePassword": "مخفی کردن رمز عبور",
   "languageToggle": "تغییر زبان",
-  "footerPrimary": "هوش مصنوعی خط فرمان خود را متحول کنید",
-  "footerSecondary": "مدرن و کارآمد",
   "errors": {
     "empty": "لطفاً نام کاربری و رمز عبور را وارد کنید",
     "invalidCredentials": "نام کاربری یا رمز عبور نامعتبر است",
@@ -24,8 +21,13 @@
     "unknown": "ورود ناموفق بود، لطفاً دوباره تلاش کنید"
   },
   "feishu": {
-    "or": "یا",
     "button": "ورود با Feishu",
+    "caption": "اعضای سازمان می‌توانند به‌صورت امن با Feishu وارد شوند",
+    "usePassword": "ورود با نام کاربری و رمز عبور",
+    "back": "بازگشت به ورود با Feishu",
+    "redirectingTitle": "در حال انتقال به Feishu",
+    "redirectingHint": "لطفاً مجوز را در Feishu تأیید کنید",
+    "privacyNote": "{{appName}} هرگز به رمز عبور Feishu شما دسترسی ندارد",
     "errors": {
       "disabled": "ورود با Feishu فعال نیست",
       "state": "ورود با Feishu منقضی شد. دوباره روی ورود با Feishu کلیک کنید",

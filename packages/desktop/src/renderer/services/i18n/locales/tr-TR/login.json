@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - Giriş Yap",
   "brand": "AionEasiful",
-  "subtitle": "Tekrar hoş geldiniz, lütfen hesabınıza giriş yapın",
+  "subtitle": "{{appName}} uygulamasına hoş geldiniz",
+  "passwordTitle": "Şifreyle giriş",
   "username": "Kullanıcı Adı",
-  "usernamePlaceholder": "Kullanıcı adınızı girin",
   "password": "Şifre",
-  "passwordPlaceholder": "Şifrenizi girin",
   "rememberMe": "Beni hatırla",
   "submit": "Giriş Yap",
   "submitting": "Giriş yapılıyor...",
@@ -13,8 +12,6 @@
   "showPassword": "Şifreyi göster",
   "hidePassword": "Şifreyi gizle",
   "languageToggle": "Dili değiştir",
-  "footerPrimary": "Komut satırı AI'nızı dönüştürün",
-  "footerSecondary": "Modern ve Verimli",
   "errors": {
     "empty": "Lütfen kullanıcı adı ve şifre girin",
     "invalidCredentials": "Geçersiz kullanıcı adı veya şifre",
@@ -24,8 +21,13 @@
     "unknown": "Giriş başarısız, lütfen tekrar deneyin"
   },
   "feishu": {
-    "or": "veya",
     "button": "Feishu ile giriş yap",
+    "caption": "Kuruluş üyeleri Feishu ile güvenli şekilde giriş yapabilir",
+    "usePassword": "Kullanıcı adı ve şifreyle giriş yap",
+    "back": "Feishu ile girişe dön",
+    "redirectingTitle": "Feishu'ya yönlendiriliyor",
+    "redirectingHint": "Lütfen yetkilendirmeyi Feishu'da onaylayın",
+    "privacyNote": "{{appName}} Feishu şifrenizi asla görmez",
     "errors": {
       "disabled": "Feishu ile giriş etkin değil",
       "state": "Feishu girişinin süresi doldu. Lütfen tekrar Feishu ile giriş yap'a tıklayın",

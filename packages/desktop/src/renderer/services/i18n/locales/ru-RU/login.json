@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful — Вход",
   "brand": "AionEasiful",
-  "subtitle": "Добро пожаловать! Войдите в свой аккаунт",
+  "subtitle": "Добро пожаловать в {{appName}}",
+  "passwordTitle": "Вход по паролю",
   "username": "Имя пользователя",
-  "usernamePlaceholder": "Введите имя пользователя",
   "password": "Пароль",
-  "passwordPlaceholder": "Введите пароль",
   "rememberMe": "Запомнить меня",
   "submit": "Войти",
   "submitting": "Вход...",
@@ -13,8 +12,6 @@
   "showPassword": "Показать пароль",
   "hidePassword": "Скрыть пароль",
   "languageToggle": "Сменить язык",
-  "footerPrimary": "Преобразуйте свой ИИ командной строки",
-  "footerSecondary": "Современно и эффективно",
   "errors": {
     "empty": "Введите имя пользователя и пароль",
     "invalidCredentials": "Неверное имя пользователя или пароль",
@@ -24,8 +21,13 @@
     "unknown": "Ошибка входа, попробуйте снова"
   },
   "feishu": {
-    "or": "или",
     "button": "Войти через Feishu",
+    "caption": "Сотрудники организации могут безопасно войти через Feishu",
+    "usePassword": "Войти по логину и паролю",
+    "back": "Вернуться ко входу через Feishu",
+    "redirectingTitle": "Переход в Feishu",
+    "redirectingHint": "Подтвердите авторизацию в Feishu",
+    "privacyNote": "{{appName}} не получает ваш пароль от Feishu",
     "errors": {
       "disabled": "Вход через Feishu не включён",
       "state": "Срок действия входа через Feishu истёк. Нажмите «Войти через Feishu» ещё раз",

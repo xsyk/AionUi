@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - Sign In",
   "brand": "AionEasiful",
-  "subtitle": "Welcome back, please sign in to your account",
+  "subtitle": "Welcome to {{appName}}",
+  "passwordTitle": "Password sign-in",
   "username": "Username",
-  "usernamePlaceholder": "Enter your username",
   "password": "Password",
-  "passwordPlaceholder": "Enter your password",
   "rememberMe": "Remember me",
   "submit": "Sign In",
   "submitting": "Signing in...",
@@ -13,8 +12,6 @@
   "showPassword": "Show password",
   "hidePassword": "Hide password",
   "languageToggle": "Change language",
-  "footerPrimary": "Transform your command-line AI",
-  "footerSecondary": "Modern & Efficient",
   "errors": {
     "empty": "Please enter username and password",
     "invalidCredentials": "Invalid username or password",
@@ -24,8 +21,13 @@
     "unknown": "Sign-in failed, please try again"
   },
   "feishu": {
-    "or": "or",
     "button": "Sign in with Feishu",
+    "caption": "Members of your organization can sign in securely with Feishu",
+    "usePassword": "Sign in with username and password",
+    "back": "Back to Feishu sign-in",
+    "redirectingTitle": "Redirecting to Feishu",
+    "redirectingHint": "Please confirm the authorization in Feishu",
+    "privacyNote": "{{appName}} never gets your Feishu password",
     "errors": {
       "disabled": "Feishu login is not enabled",
       "state": "The Feishu sign-in expired. Please click Sign in with Feishu again",

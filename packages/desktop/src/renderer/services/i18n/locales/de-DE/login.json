@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - Anmelden",
   "brand": "AionEasiful",
-  "subtitle": "Willkommen zurück, bitte melde dich in deinem Konto an",
+  "subtitle": "Willkommen bei {{appName}}",
+  "passwordTitle": "Anmeldung mit Passwort",
   "username": "Benutzername",
-  "usernamePlaceholder": "Benutzernamen eingeben",
   "password": "Passwort",
-  "passwordPlaceholder": "Passwort eingeben",
   "rememberMe": "Angemeldet bleiben",
   "submit": "Anmelden",
   "submitting": "Wird angemeldet...",
@@ -13,8 +12,6 @@
   "showPassword": "Passwort anzeigen",
   "hidePassword": "Passwort ausblenden",
   "languageToggle": "Sprache ändern",
-  "footerPrimary": "Verwandle deine Kommandozeilen-KI",
-  "footerSecondary": "Modern & Effizient",
   "errors": {
     "empty": "Bitte Benutzername und Passwort eingeben",
     "invalidCredentials": "Ungültiger Benutzername oder Passwort",
@@ -24,8 +21,13 @@
     "unknown": "Anmeldung fehlgeschlagen, bitte erneut versuchen"
   },
   "feishu": {
-    "or": "oder",
     "button": "Mit Feishu anmelden",
+    "caption": "Mitglieder Ihrer Organisation können sich sicher mit Feishu anmelden",
+    "usePassword": "Mit Benutzername und Passwort anmelden",
+    "back": "Zurück zur Feishu-Anmeldung",
+    "redirectingTitle": "Weiterleitung zu Feishu",
+    "redirectingHint": "Bitte bestätigen Sie die Autorisierung in Feishu",
+    "privacyNote": "{{appName}} erhält Ihr Feishu-Passwort nie",
     "errors": {
       "disabled": "Die Feishu-Anmeldung ist nicht aktiviert",
       "state": "Die Feishu-Anmeldung ist abgelaufen. Bitte klicken Sie erneut auf „Mit Feishu anmelden\"",

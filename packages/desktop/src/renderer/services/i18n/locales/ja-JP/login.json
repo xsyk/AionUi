@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - ログイン",
   "brand": "AionEasiful",
-  "subtitle": "おかえりなさい。アカウントにサインインしてください",
+  "subtitle": "{{appName}} へようこそ",
+  "passwordTitle": "パスワードでログイン",
   "username": "ユーザー名",
-  "usernamePlaceholder": "ユーザー名を入力してください",
   "password": "パスワード",
-  "passwordPlaceholder": "パスワードを入力してください",
   "rememberMe": "ログイン状態を保持",
   "submit": "ログイン",
   "submitting": "ログイン中...",
@@ -13,8 +12,6 @@
   "showPassword": "パスワードを表示",
   "hidePassword": "パスワードを隠す",
   "languageToggle": "言語を切り替える",
-  "footerPrimary": "コマンドラインAIをモダンに変革",
-  "footerSecondary": "効率的でエレガント",
   "errors": {
     "empty": "ユーザー名とパスワードを入力してください",
     "invalidCredentials": "ユーザー名またはパスワードが正しくありません",
@@ -24,8 +21,13 @@
     "unknown": "ログインに失敗しました。後でもう一度お試しください"
   },
   "feishu": {
-    "or": "または",
     "button": "Feishu でログイン",
+    "caption": "組織のメンバーは Feishu で安全にログインできます",
+    "usePassword": "アカウントとパスワードでログイン",
+    "back": "Feishu ログインに戻る",
+    "redirectingTitle": "Feishu に移動しています",
+    "redirectingHint": "Feishu で認証を許可してください",
+    "privacyNote": "{{appName}} が Feishu のパスワードを取得することはありません",
     "errors": {
       "disabled": "Feishu ログインは有効になっていません",
       "state": "Feishu ログインの有効期限が切れました。もう一度 Feishu でログインしてください",

@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - Connexion",
   "brand": "AionEasiful",
-  "subtitle": "Bienvenue, veuillez vous connecter à votre compte",
+  "subtitle": "Bienvenue dans {{appName}}",
+  "passwordTitle": "Connexion par mot de passe",
   "username": "Nom d'utilisateur",
-  "usernamePlaceholder": "Entrez votre nom d'utilisateur",
   "password": "Mot de passe",
-  "passwordPlaceholder": "Entrez votre mot de passe",
   "rememberMe": "Se souvenir de moi",
   "submit": "Se connecter",
   "submitting": "Connexion en cours...",
@@ -13,8 +12,6 @@
   "showPassword": "Afficher le mot de passe",
   "hidePassword": "Masquer le mot de passe",
   "languageToggle": "Changer de langue",
-  "footerPrimary": "Transformez votre IA en ligne de commande",
-  "footerSecondary": "Moderne et efficace",
   "errors": {
     "empty": "Veuillez entrer un nom d'utilisateur et un mot de passe",
     "invalidCredentials": "Nom d'utilisateur ou mot de passe invalide",
@@ -24,8 +21,13 @@
     "unknown": "Échec de connexion, veuillez réessayer"
   },
   "feishu": {
-    "or": "ou",
     "button": "Se connecter avec Feishu",
+    "caption": "Les membres de votre organisation peuvent se connecter en toute sécurité avec Feishu",
+    "usePassword": "Se connecter avec identifiant et mot de passe",
+    "back": "Retour à la connexion Feishu",
+    "redirectingTitle": "Redirection vers Feishu",
+    "redirectingHint": "Veuillez confirmer l'autorisation dans Feishu",
+    "privacyNote": "{{appName}} n'obtient jamais votre mot de passe Feishu",
     "errors": {
       "disabled": "La connexion Feishu n'est pas activée",
       "state": "La connexion Feishu a expiré. Cliquez à nouveau sur Se connecter avec Feishu",

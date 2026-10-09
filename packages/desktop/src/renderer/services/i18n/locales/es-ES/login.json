@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - Iniciar sesión",
   "brand": "AionEasiful",
-  "subtitle": "Bienvenido de nuevo, inicia sesión en tu cuenta",
+  "subtitle": "Te damos la bienvenida a {{appName}}",
+  "passwordTitle": "Acceso con contraseña",
   "username": "Usuario",
-  "usernamePlaceholder": "Ingresa tu usuario",
   "password": "Contraseña",
-  "passwordPlaceholder": "Ingresa tu contraseña",
   "rememberMe": "Recordarme",
   "submit": "Iniciar sesión",
   "submitting": "Iniciando sesión...",
@@ -13,8 +12,6 @@
   "showPassword": "Mostrar contraseña",
   "hidePassword": "Ocultar contraseña",
   "languageToggle": "Cambiar idioma",
-  "footerPrimary": "Transforma tu IA de línea de comandos",
-  "footerSecondary": "Moderno y eficiente",
   "errors": {
     "empty": "Ingresa usuario y contraseña",
     "invalidCredentials": "Usuario o contraseña inválidos",
@@ -24,8 +21,13 @@
     "unknown": "Error al iniciar sesión, intenta de nuevo"
   },
   "feishu": {
-    "or": "o",
     "button": "Iniciar sesión con Feishu",
+    "caption": "Los miembros de tu organización pueden iniciar sesión de forma segura con Feishu",
+    "usePassword": "Iniciar sesión con usuario y contraseña",
+    "back": "Volver al inicio de sesión con Feishu",
+    "redirectingTitle": "Redirigiendo a Feishu",
+    "redirectingHint": "Confirma la autorización en Feishu",
+    "privacyNote": "{{appName}} nunca obtiene tu contraseña de Feishu",
     "errors": {
       "disabled": "El inicio de sesión con Feishu no está activado",
       "state": "El inicio de sesión con Feishu caducó. Vuelve a pulsar Iniciar sesión con Feishu",

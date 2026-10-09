@@ -1,11 +1,10 @@
 {
   "pageTitle": "AionEasiful - Entrar",
   "brand": "AionEasiful",
-  "subtitle": "Bem-vindo de volta, por favor entre na sua conta",
+  "subtitle": "Boas-vindas ao {{appName}}",
+  "passwordTitle": "Entrar com senha",
   "username": "Nome de usuário",
-  "usernamePlaceholder": "Digite seu nome de usuário",
   "password": "Senha",
-  "passwordPlaceholder": "Digite sua senha",
   "rememberMe": "Lembrar-me",
   "submit": "Entrar",
   "submitting": "Entrando...",
@@ -13,8 +12,6 @@
   "showPassword": "Mostrar senha",
   "hidePassword": "Ocultar senha",
   "languageToggle": "Mudar idioma",
-  "footerPrimary": "Transforme sua IA de linha de comando",
-  "footerSecondary": "Moderno e Eficiente",
   "errors": {
     "empty": "Por favor, insira nome de usuário e senha",
     "invalidCredentials": "Nome de usuário ou senha inválidos",
@@ -24,8 +21,13 @@
     "unknown": "O login falhou, por favor tente novamente"
   },
   "feishu": {
-    "or": "ou",
     "button": "Entrar com Feishu",
+    "caption": "Membros da organização podem entrar com segurança pelo Feishu",
+    "usePassword": "Entrar com usuário e senha",
+    "back": "Voltar ao login com Feishu",
+    "redirectingTitle": "Redirecionando para o Feishu",
+    "redirectingHint": "Confirme a autorização no Feishu",
+    "privacyNote": "O {{appName}} nunca recebe sua senha do Feishu",
     "errors": {
       "disabled": "O login com Feishu não está ativado",
       "state": "O login com Feishu expirou. Clique em Entrar com Feishu novamente",
