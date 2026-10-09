@@ -13,6 +13,7 @@
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
+import * as net from 'net';
 import * as path from 'path';
 import { jsonrepair } from 'jsonrepair';
 import type OpenAI from 'openai';
@@ -245,15 +246,118 @@ const failedToProcessImages = (errors: string[]): ImageGenResult => ({
 
 // ===== OpenAI Images API ("form A": gpt-image-*, dall-e-*) =====
 
+/** An edit request takes at most 16 input images (gpt-image-1's documented limit). */
+const MAX_INPUT_IMAGES = 16;
 /** gpt-image takes input images of up to 50MB each; anything bigger is not worth holding in memory. */
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 const BASE64_DATA_URL_PREFIX = /^data:([^;,]+);base64,/;
+/** Sent on every download, whichever route it takes: Node's fetch would add headers of its own, http.get none. */
+const DOWNLOAD_HEADERS = { 'User-Agent': 'AionUi', Accept: 'image/*,*/*;q=0.8' };
 
 type LoadedImage = { data: Buffer; mimeType: string };
 type RawDownload = { data: Buffer; contentType: string | undefined };
-/** How downloads are made: through `proxy` when set, and abandoned when `signal` fires. */
-type DownloadOptions = { proxy?: string; signal?: AbortSignal };
+/**
+ * How downloads are made: through `proxy` when set, abandoned when `signal` fires, and with every URL it requests
+ * (the first one and each redirect) handed to `assertAllowedUrl` beforehand.
+ */
+type DownloadOptions = { proxy?: string; signal?: AbortSignal; assertAllowedUrl?: (url: string) => void };
+
+/**
+ * An image URL that was refused, could not be fetched, or did not serve an image. Kept apart from the errors of the
+ * Images API itself so that the failure log can say which of the two it was.
+ */
+class ImageSourceError extends Error {
+  override name = 'ImageSourceError';
+}
+
+// ----- Where an input URL may point -----
+
+/** Loopback, "this host", link-local and private ranges. IPv4-mapped IPv6 addresses are matched by the IPv4 rules. */
+const PRIVATE_NETWORKS = new net.BlockList();
+for (const [network, prefix] of [
+  ['0.0.0.0', 8],
+  ['10.0.0.0', 8],
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16],
+  ['172.16.0.0', 12],
+  ['192.168.0.0', 16],
+] as const) {
+  PRIVATE_NETWORKS.addSubnet(network, prefix, 'ipv4');
+}
+PRIVATE_NETWORKS.addAddress('::', 'ipv6');
+PRIVATE_NETWORKS.addAddress('::1', 'ipv6');
+PRIVATE_NETWORKS.addSubnet('fc00::', 7, 'ipv6');
+PRIVATE_NETWORKS.addSubnet('fe80::', 10, 'ipv6');
+
+/**
+ * Whether `hostname`, as `new URL()` reports it, is localhost or a private literal address. That is a name, a dotted
+ * IPv4 address (the URL parser also turns 2130706433 or 0x7f.1 into one) or a bracketed IPv6 address.
+ */
+function isPrivateHost(hostname: string): boolean {
+  const host = hostname.replace(/\.$/, '');
+  if (host === 'localhost' || host.endsWith('.localhost')) {
+    return true;
+  }
+  const address = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
+  const family = net.isIP(address);
+  return family !== 0 && PRIVATE_NETWORKS.check(address, family === 4 ? 'ipv4' : 'ipv6');
+}
+
+/**
+ * Input URLs are the model's choice, so they must not be a way to make this process request services on its own
+ * network (cloud metadata, admin pages, ...). Only the literal host is looked at, nothing is resolved. Not applied to
+ * the URL the provider answers with: a self-hosted relay can legitimately sit on a private address.
+ */
+function assertPublicImageUrl(url: string): void {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch (error) {
+    throw new ImageSourceError(`Invalid image URL: ${url}`, { cause: error });
+  }
+  if (isPrivateHost(hostname)) {
+    throw new ImageSourceError(
+      `Refusing to download from ${hostname}: input image URLs must not point to localhost, loopback, link-local or private network addresses. Save the image into the workspace and pass its file path instead.`
+    );
+  }
+}
+
+// ----- Telling images from everything else -----
+
+/** The size field of a BMP's DIB header, which follows the 14-byte file header, has one of these values. */
+const BMP_DIB_HEADER_SIZES: ReadonlySet<number> = new Set([12, 16, 40, 52, 56, 64, 108, 124]);
+
+/** The type the first bytes say this is, for the formats the Images API and this tool deal with. */
+function sniffImageMimeType(data: Buffer): string | undefined {
+  const head = data.toString('latin1', 0, 12);
+  if (head.startsWith('\x89PNG\r\n\x1a\n')) return 'image/png';
+  if (head.startsWith('\xff\xd8\xff')) return 'image/jpeg';
+  if (head.startsWith('GIF87a') || head.startsWith('GIF89a')) return 'image/gif';
+  if (head.startsWith('RIFF') && head.startsWith('WEBP', 8)) return 'image/webp';
+  // "BM" alone is just two letters of text, so the header size has to fit as well
+  if (head.startsWith('BM') && data.length >= 18 && BMP_DIB_HEADER_SIZES.has(data.readUInt32LE(14))) return 'image/bmp';
+  if (head.startsWith('II*\x00') || head.startsWith('MM\x00*')) return 'image/tiff';
+  return undefined;
+}
+
+/**
+ * The MIME type of downloaded bytes, taken from their signature and from nothing else: neither the Content-Type the
+ * server announced nor the extension of the URL can make something an image.
+ */
+function requireImageMimeType(data: Buffer, announcedType: string | undefined): string {
+  const mimeType = sniffImageMimeType(data);
+  if (mimeType) {
+    return mimeType;
+  }
+  const announced = announcedType?.split(';')[0].trim().toLowerCase();
+  // The header is the server's to write and this message goes back to the model: only quote it if it is a media type
+  const quoted =
+    announced && /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(announced) ? `the server announced ${announced}; ` : '';
+  throw new Error(
+    `The downloaded content is not an image (${quoted}supported formats: PNG, JPEG, GIF, WEBP, BMP, TIFF)`
+  );
+}
 
 /** Collects a body stream, giving up as soon as it grows past MAX_IMAGE_BYTES. */
 async function readBounded(body: AsyncIterable<Uint8Array>): Promise<Buffer> {
@@ -272,8 +376,41 @@ async function readBounded(body: AsyncIterable<Uint8Array>): Promise<Buffer> {
 const describeStatus = (status: number, statusText: string | undefined): string =>
   `HTTP ${status}${statusText ? ` ${statusText}` : ''}`;
 
-async function downloadWithFetch(url: string, signal: AbortSignal): Promise<RawDownload> {
-  const response = await fetch(url, { signal });
+/** The statuses that fetch itself follows. */
+const REDIRECT_STATUSES: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
+
+/**
+ * Where an answer to a request for `from` sends the client, or undefined when the answer is not a redirect.
+ * Throws when the `Location` is unusable, or leads somewhere that is not http(s).
+ */
+function redirectTarget(status: number, location: string | null | undefined, from: string): string | undefined {
+  if (!REDIRECT_STATUSES.has(status) || !location) {
+    return undefined;
+  }
+  const target = new URL(location, from).toString();
+  if (!isHttpUrl(target)) {
+    throw new Error('Redirected to a URL that is not http(s)');
+  }
+  return target;
+}
+
+/** Redirects are followed here rather than by fetch itself, so that every hop passes `assertAllowedUrl` first. */
+async function downloadWithFetch(
+  url: string,
+  signal: AbortSignal,
+  assertAllowedUrl: DownloadOptions['assertAllowedUrl'],
+  redirectsLeft: number
+): Promise<RawDownload> {
+  assertAllowedUrl?.(url);
+  const response = await fetch(url, { signal, headers: DOWNLOAD_HEADERS, redirect: 'manual' });
+  const next = redirectTarget(response.status, response.headers.get('location'), url);
+  if (next) {
+    await response.body?.cancel();
+    if (redirectsLeft === 0) {
+      throw new Error('Too many redirects');
+    }
+    return downloadWithFetch(next, signal, assertAllowedUrl, redirectsLeft - 1);
+  }
   if (!response.ok) {
     throw new Error(describeStatus(response.status, response.statusText));
   }
@@ -290,28 +427,30 @@ function requestThroughProxy(
   url: string,
   agent: http.Agent,
   signal: AbortSignal,
+  assertAllowedUrl: DownloadOptions['assertAllowedUrl'],
   redirectsLeft: number
 ): Promise<RawDownload> {
   return new Promise<RawDownload>((resolve, reject) => {
+    assertAllowedUrl?.(url);
     const transport = new URL(url).protocol === 'https:' ? https : http;
-    const request = transport.get(url, { agent, signal }, (response) => {
+    const request = transport.get(url, { agent, signal, headers: DOWNLOAD_HEADERS }, (response) => {
       const status = response.statusCode ?? 0;
-      const location = response.headers.location;
-      if (status >= 300 && status < 400 && location) {
+      let next: string | undefined;
+      try {
+        next = redirectTarget(status, response.headers.location, url);
+      } catch (error) {
+        // Thrown from an event callback this would be an uncaught exception, so hand it to the promise.
+        response.resume();
+        reject(error);
+        return;
+      }
+      if (next) {
         response.resume();
         if (redirectsLeft === 0) {
           reject(new Error('Too many redirects'));
           return;
         }
-        let next: string;
-        try {
-          next = new URL(location, url).toString();
-        } catch (error) {
-          // Thrown from an event callback this would be an uncaught exception, so hand it to the promise.
-          reject(error);
-          return;
-        }
-        resolve(requestThroughProxy(next, agent, signal, redirectsLeft - 1));
+        resolve(requestThroughProxy(next, agent, signal, assertAllowedUrl, redirectsLeft - 1));
         return;
       }
       if (status < 200 || status >= 300) {
@@ -329,32 +468,18 @@ function requestThroughProxy(
  * Node's global fetch cannot use an http.Agent, so when a proxy is configured the download goes through
  * https-proxy-agent (the same agent ClientFactory builds for the API client) with http(s).get instead.
  */
-async function downloadThroughProxy(url: string, proxy: string, signal: AbortSignal): Promise<RawDownload> {
+async function downloadThroughProxy(
+  url: string,
+  proxy: string,
+  signal: AbortSignal,
+  assertAllowedUrl: DownloadOptions['assertAllowedUrl']
+): Promise<RawDownload> {
   const { HttpsProxyAgent } = await import('https-proxy-agent');
-  return requestThroughProxy(url, new HttpsProxyAgent(proxy), signal, MAX_REDIRECTS);
+  return requestThroughProxy(url, new HttpsProxyAgent(proxy), signal, assertAllowedUrl, MAX_REDIRECTS);
 }
 
-/** The announced image type, or the one the URL's extension implies when the server announces none. */
-function resolveImageMimeType(contentType: string | undefined, url: string): string {
-  const announced = contentType?.split(';')[0].trim().toLowerCase();
-  if (announced?.startsWith('image/')) {
-    return announced;
-  }
-  if (announced && announced !== 'application/octet-stream' && announced !== 'binary/octet-stream') {
-    throw new Error(`The URL did not return an image (content type ${announced})`);
-  }
-  return getImageMimeType(new URL(url).pathname);
-}
-
-/**
- * Bytes and MIME type of a base64 data URL or an http(s) image URL. Downloads honour the caller's abort signal,
- * the API timeout, the proxy, and the size limit.
- */
-async function loadImageBytes(url: string, { proxy, signal }: DownloadOptions): Promise<LoadedImage> {
-  const inline = BASE64_DATA_URL_PREFIX.exec(url);
-  if (inline) {
-    return { mimeType: inline[1], data: Buffer.from(url.slice(inline[0].length), 'base64') };
-  }
+/** Downloads an http(s) URL and checks that what came back is an image, whatever the server says it is. */
+async function downloadImage(url: string, { proxy, signal, assertAllowedUrl }: DownloadOptions): Promise<LoadedImage> {
   if (!isHttpUrl(url)) {
     throw new Error('Only http(s) image URLs are supported');
   }
@@ -362,12 +487,30 @@ async function loadImageBytes(url: string, { proxy, signal }: DownloadOptions): 
   const timeout = AbortSignal.timeout(API_TIMEOUT_MS);
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   const { data, contentType } = proxy
-    ? await downloadThroughProxy(url, proxy, requestSignal)
-    : await downloadWithFetch(url, requestSignal);
+    ? await downloadThroughProxy(url, proxy, requestSignal, assertAllowedUrl)
+    : await downloadWithFetch(url, requestSignal, assertAllowedUrl, MAX_REDIRECTS);
   if (data.length === 0) {
     throw new Error('The server returned an empty response');
   }
-  return { data, mimeType: resolveImageMimeType(contentType, url) };
+  return { data, mimeType: requireImageMimeType(data, contentType) };
+}
+
+/**
+ * Bytes and MIME type of a base64 data URL or an http(s) image URL. Downloads honour the caller's abort signal,
+ * the API timeout, the proxy, and the size limit, and only ever yield bytes that are really an image.
+ */
+async function loadImageBytes(url: string, options: DownloadOptions): Promise<LoadedImage> {
+  const inline = BASE64_DATA_URL_PREFIX.exec(url);
+  if (inline) {
+    return { mimeType: inline[1], data: Buffer.from(url.slice(inline[0].length), 'base64') };
+  }
+  try {
+    return await downloadImage(url, options);
+  } catch (error) {
+    throw error instanceof ImageSourceError
+      ? error
+      : new ImageSourceError(error instanceof Error ? error.message : String(error), { cause: error });
+  }
 }
 
 /** An input image as the file the Images API edit endpoint wants. */
@@ -379,7 +522,7 @@ async function toUploadFile(image: ImageContent, index: number, download: Downlo
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const label = isHttpUrl(url) ? `Image ${index + 1} (${url})` : `Image ${index + 1}`;
-    throw new Error(`${label}: ${errorMessage}`, { cause: error });
+    throw new ImageSourceError(`${label}: ${errorMessage}`, { cause: error });
   }
   const extension = MIME_TO_EXT_MAP[loaded.mimeType.replace(/^image\//, '')] ?? DEFAULT_IMAGE_EXTENSION;
   // The type has to be set: without it the file is sent as application/octet-stream, which the API refuses.
@@ -405,7 +548,7 @@ async function imagesResponseToDataUrl(
   throw new Error('The API response contained no image data');
 }
 
-type OpenAiImagesRequest = DownloadOptions & {
+type OpenAiImagesRequest = Pick<DownloadOptions, 'proxy' | 'signal'> & {
   prompt: string;
   imageUris: string[];
   provider: TProviderWithModel;
@@ -425,6 +568,12 @@ async function executeOpenAiImagesGeneration({
   proxy,
   signal,
 }: OpenAiImagesRequest): Promise<ImageGenResult> {
+  // Counted as requested, before anything is read, fetched or sent
+  if (imageUris.length > MAX_INPUT_IMAGES) {
+    const message = `Too many input images: ${imageUris.length} were given, but the OpenAI Images API accepts at most ${MAX_INPUT_IMAGES} per request`;
+    return { success: false, text: `Image generation failed: ${message}`, error: message };
+  }
+
   try {
     let inputImages: ImageContent[] = [];
     if (imageUris.length > 0) {
@@ -433,6 +582,12 @@ async function executeOpenAiImagesGeneration({
         return failedToProcessImages(errors);
       }
       inputImages = images;
+      // Every URL is checked before the first download starts, so one refused URL means no request at all
+      for (const { image_url } of inputImages) {
+        if (isHttpUrl(image_url.url)) {
+          assertPublicImageUrl(image_url.url);
+        }
+      }
     }
 
     const rotatingClient: RotatingClient = await ClientFactory.createRotatingClient(provider, {
@@ -450,7 +605,8 @@ async function executeOpenAiImagesGeneration({
     if (inputImages.length === 0) {
       response = await rotatingClient.generateImage({ model: provider.use_model, prompt, n: 1 }, requestOptions);
     } else {
-      const files = await Promise.all(inputImages.map((image, index) => toUploadFile(image, index, { proxy, signal })));
+      const inputDownload: DownloadOptions = { proxy, signal, assertAllowedUrl: assertPublicImageUrl };
+      const files = await Promise.all(inputImages.map((image, index) => toUploadFile(image, index, inputDownload)));
       // One image goes as the plain `image` field every model accepts; several need the `image[]` form (gpt-image).
       response = await rotatingClient.editImage(
         { model: provider.use_model, prompt, image: files.length === 1 ? files[0] : files },
@@ -473,7 +629,9 @@ async function executeOpenAiImagesGeneration({
       return { success: false, text: 'Image generation was cancelled.', error: 'cancelled' };
     }
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[ImageGen] OpenAI Images API call failed:', error);
+    const failure =
+      error instanceof ImageSourceError ? 'Image download or validation failed' : 'OpenAI Images API call failed';
+    console.error(`[ImageGen] ${failure}:`, error);
     return { success: false, text: `Image generation failed: ${errorMessage}`, error: errorMessage };
   }
 }
