@@ -77,7 +77,7 @@ if (fs.existsSync(rendererOutDir)) {
   throw new Error(`Desktop renderer output not found at ${rendererOutDir}. Run bunx electron-vite build first.`);
 }
 
-// 6b. Copy the image generation MCP script
+// 6b. Build and copy the image generation MCP script
 console.log('6b. Building and copying image generation MCP script...');
 execSync('node scripts/build-mcp-servers.js', { cwd: projectRoot, stdio: 'inherit' });
 const mcpImageGenSrc = path.join(projectRoot, 'out/main/builtin-mcp-image-gen.js');
@@ -87,6 +87,13 @@ if (!fs.existsSync(mcpImageGenSrc)) {
 }
 fs.mkdirSync(path.dirname(mcpImageGenDest), { recursive: true });
 fs.copyFileSync(mcpImageGenSrc, mcpImageGenDest);
+// The bundle is CommonJS, but the tarball's root package.json says "type": "module", which would make Node
+// load the .js file as an ES module and exit on the first `require`. The nearest package.json wins, so pin
+// this directory to CommonJS.
+fs.writeFileSync(
+  path.join(path.dirname(mcpImageGenDest), 'package.json'),
+  JSON.stringify({ type: 'commonjs' }, null, 2) + '\n'
+);
 
 // 7. Copy bundled-aioncore
 const backendSrc = path.join(projectRoot, 'resources/bundled-aioncore', `${platform}-${arch}`);

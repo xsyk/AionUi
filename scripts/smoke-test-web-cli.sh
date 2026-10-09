@@ -99,7 +99,8 @@ DATA_DIR="$(mktemp -d)/aionui-web-data"
 # Full-stack start: backend is bundled, so we can also exercise /login below.
 # If the bundled backend is missing the CLI falls back to frontend-only mode
 # and later login probe is skipped.
-./aionui-web start --port "$HTTP_PORT" --data-dir "$DATA_DIR" > /tmp/aionui-web.log 2>&1 &
+# An explicit --work-dir keeps the smoke run away from the real install-time choice (/data/.AionEasiful).
+./aionui-web start --port "$HTTP_PORT" --data-dir "$DATA_DIR" --work-dir "$DATA_DIR/work" > /tmp/aionui-web.log 2>&1 &
 SERVER_PID=$!
 
 # Wait up to 30s for HTTP to come up. With backend spawned, first start spends

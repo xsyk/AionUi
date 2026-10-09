@@ -43,6 +43,9 @@ export INSTALL_DIR="/tmp/aionui-web-smoke-test"
 export BIN_DIR="/tmp/smoke-bin"
 export CREATE_SYMLINK=1
 export UPDATE_PATH=0  # Don't modify shell profile in container
+# install-web.sh runs `aionui-web init-dirs`; keep it off the real ~/.aionui-web and /data/.AionEasiful.
+export AIONUI_DATA_DIR="/tmp/aionui-web-smoke-data"
+export AIONUI_WORK_DIR="/tmp/aionui-web-smoke-data/work"
 
 bash /tmp/install-web.sh --no-path
 
@@ -80,7 +83,7 @@ fi
 echo "✓ Version: $VERSION_OUTPUT"
 
 # Cleanup
-rm -rf "$INSTALL_DIR" "$BIN_DIR" /tmp/install-web.sh
+rm -rf "$INSTALL_DIR" "$BIN_DIR" /tmp/install-web.sh "$AIONUI_DATA_DIR"
 
 echo ""
 echo "========================================"
