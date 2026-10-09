@@ -15,6 +15,12 @@ import { uuid } from '@/common/utils';
 type AgentRepairPanelProps = {
   agent: ManagedAgent;
   onSaved: () => void;
+  /**
+   * The viewer may not change the shared agent settings (only the administrator
+   * can): show the status, but neither load nor offer the launch path and
+   * environment variable overrides.
+   */
+  readOnly?: boolean;
 };
 
 // The diagnostic banner gives the page context: what state the agent is in,
@@ -24,29 +30,36 @@ type AgentRepairPanelProps = {
 type DiagnosticBanner = {
   type: 'success' | 'warning' | 'error' | 'info';
   title: string;
-  content: string;
+  content?: string;
 };
 
-const resolveDiagnosticBanner = (t: ReturnType<typeof useTranslation>['t'], agent: ManagedAgent): DiagnosticBanner => {
+const resolveDiagnosticBanner = (
+  t: ReturnType<typeof useTranslation>['t'],
+  agent: ManagedAgent,
+  readOnly: boolean
+): DiagnosticBanner => {
   const diagnostics = formatManagedAgentDiagnosticMessage(t, agent);
+  // These hints send the reader to the launch path / environment variable fields below. A read-only viewer
+  // has no such fields, so they get the diagnostic message of the failed check and nothing pointing at them.
+  const overridesHint = (hint: string) => (readOnly ? undefined : hint);
   switch (agent.status) {
     case 'missing':
       return {
         type: 'error',
         title: t('settings.repair.missingTitle'),
-        content: diagnostics || t('settings.repair.missingHint'),
+        content: diagnostics || overridesHint(t('settings.repair.missingHint')),
       };
     case 'offline':
       return {
         type: 'warning',
         title: t('settings.repair.offlineTitle'),
-        content: diagnostics || t('settings.repair.offlineHint'),
+        content: diagnostics || overridesHint(t('settings.repair.offlineHint')),
       };
     case 'online':
       return {
         type: 'success',
         title: t('settings.repair.onlineTitle'),
-        content: t('settings.repair.onlineHint'),
+        content: overridesHint(t('settings.repair.onlineHint')),
       };
     default:
       // 'unchecked' (never connection-tested) and any future/unknown status.
@@ -82,7 +95,7 @@ const showSaveAndTestResult = (t: ReturnType<typeof useTranslation>['t'], result
   }
 };
 
-const AgentRepairPanel: React.FC<AgentRepairPanelProps> = ({ agent, onSaved }) => {
+const AgentRepairPanel: React.FC<AgentRepairPanelProps> = ({ agent, onSaved, readOnly = false }) => {
   const { t } = useTranslation();
   const [commandOverride, setCommandOverride] = useState('');
   const [envRows, setEnvRows] = useState<EnvVarRow[]>([]);
@@ -93,9 +106,11 @@ const AgentRepairPanel: React.FC<AgentRepairPanelProps> = ({ agent, onSaved }) =
   const isInternalAionCli = agent.agent_type === 'aionrs' && agent.agent_source === 'internal';
 
   // Load current overrides on mount. The repair page is itself the explicit
-  // entry point, so there's no separate unlock step.
+  // entry point, so there's no separate unlock step. Overrides are shared by
+  // every user and the server only hands them to the administrator (403 for
+  // anyone else), so a read-only viewer never asks for them.
   useEffect(() => {
-    if (isInternalAionCli) return;
+    if (isInternalAionCli || readOnly) return;
 
     let cancelled = false;
     void (async () => {
@@ -117,7 +132,7 @@ const AgentRepairPanel: React.FC<AgentRepairPanelProps> = ({ agent, onSaved }) =
     return () => {
       cancelled = true;
     };
-  }, [agent.id, isInternalAionCli]);
+  }, [agent.id, isInternalAionCli, readOnly]);
 
   const handleReset = useCallback(() => {
     setCommandOverride('');
@@ -168,7 +183,7 @@ const AgentRepairPanel: React.FC<AgentRepairPanelProps> = ({ agent, onSaved }) =
     }
   }, [agent.id, commandOverride, envRows, isSaving, onSaved, t]);
 
-  const banner = resolveDiagnosticBanner(t, agent);
+  const banner = resolveDiagnosticBanner(t, agent, readOnly);
 
   // A launch-path override only makes sense for direct-CLI agents. Bridge-launched
   // rows (e.g. `npx`) keep the bridge's own arguments (`-y <package> …`) in `args`;
@@ -185,6 +200,9 @@ const AgentRepairPanel: React.FC<AgentRepairPanelProps> = ({ agent, onSaved }) =
   // user resolve login in their terminal). Anything other than a known
   // online/offline/missing status is treated as not-yet-actionable.
   const isActionable = agent.status === 'online' || agent.status === 'offline' || agent.status === 'missing';
+
+  // The launch path, environment variables and Save & Test are all overrides: shown to whoever may change them.
+  const canEditOverrides = !readOnly && !isInternalAionCli && isActionable;
 
   // The launch-path override is only the right lever once a check has actually
   // failed: `missing` (command not found on the default path) or `offline`
@@ -248,15 +266,15 @@ const AgentRepairPanel: React.FC<AgentRepairPanelProps> = ({ agent, onSaved }) =
           which field below to use. */}
       <Alert type={banner.type} title={banner.title} content={banner.content} className='!rounded-8px' />
 
-      {!isInternalAionCli && isActionable && showPath ? pathBlock : null}
-      {!isInternalAionCli && isActionable ? envBlock : null}
+      {canEditOverrides && showPath ? pathBlock : null}
+      {canEditOverrides ? envBlock : null}
 
       {/* Error Alert */}
       {error && <Alert type='error' content={error} closable onClose={() => setError('')} className='!rounded-8px' />}
 
       {/* Save Button — only once the agent is actionable (checked). While
           unchecked we show just the banner and steer the user to Test Connection. */}
-      {!isInternalAionCli && isActionable ? (
+      {canEditOverrides ? (
         <Button
           type='primary'
           size='large'

@@ -235,3 +235,95 @@ describe('AgentRepairPanel', () => {
     expect(screen.queryByRole('button', { name: /repair\.saveAndTest/ })).toBeNull();
   });
 });
+
+describe('AgentRepairPanel (read-only)', () => {
+  // Overrides are shared by the whole server and only the administrator can read or change them.
+  const sharedAgent: ManagedAgent = {
+    id: 'test-agent-2',
+    name: 'Shared Agent',
+    agent_type: 'acp',
+    agent_source: 'builtin',
+    backend: 'claude',
+    command: 'claude',
+    enabled: true,
+    installed: true,
+    status: 'offline',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(acpConversation.getAgentOverrides.invoke).mockResolvedValue({});
+  });
+
+  it('does not fetch the overrides, which the server only returns to the administrator', async () => {
+    render(<AgentRepairPanel agent={sharedAgent} readOnly onSaved={vi.fn()} />);
+
+    expect(await screen.findByText('settings.repair.offlineTitle')).toBeInTheDocument();
+    expect(acpConversation.getAgentOverrides.invoke).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing', 'offline', 'online'] as const)(
+    'renders no launch path, environment variables or save button when the agent is %s',
+    async (status) => {
+      render(<AgentRepairPanel agent={{ ...sharedAgent, status }} readOnly onSaved={vi.fn()} />);
+
+      expect(await screen.findByText(`settings.repair.${status}Title`)).toBeInTheDocument();
+      expect(screen.queryByText('settings.repair.pathLabel')).not.toBeInTheDocument();
+      expect(screen.queryByText('settings.repair.envLabel')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/repair\.pathPlaceholder/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /repair\.saveAndTest/ })).not.toBeInTheDocument();
+      expect(acpConversation.getAgentOverrides.invoke).not.toHaveBeenCalled();
+    }
+  );
+
+  it('still explains a failed check with its diagnostic message', async () => {
+    render(
+      <AgentRepairPanel
+        agent={{ ...sharedAgent, last_check_error_message: 'spawn claude ENOENT' }}
+        readOnly
+        onSaved={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText('settings.repair.offlineTitle')).toBeInTheDocument();
+    expect(screen.getByText('spawn claude ENOENT')).toBeInTheDocument();
+  });
+
+  it('drops the generic hints that send the reader to the launch path and environment variables', async () => {
+    const { rerender } = render(<AgentRepairPanel agent={sharedAgent} onSaved={vi.fn()} />);
+    // The administrator keeps the hint: the fields it mentions are right below it.
+    expect(await screen.findByText('settings.repair.offlineHint')).toBeInTheDocument();
+
+    rerender(<AgentRepairPanel agent={sharedAgent} readOnly onSaved={vi.fn()} />);
+    expect(screen.getByText('settings.repair.offlineTitle')).toBeInTheDocument();
+    expect(screen.queryByText('settings.repair.offlineHint')).not.toBeInTheDocument();
+
+    rerender(<AgentRepairPanel agent={{ ...sharedAgent, status: 'missing' }} readOnly onSaved={vi.fn()} />);
+    expect(screen.getByText('settings.repair.missingTitle')).toBeInTheDocument();
+    expect(screen.queryByText('settings.repair.missingHint')).not.toBeInTheDocument();
+
+    rerender(<AgentRepairPanel agent={{ ...sharedAgent, status: 'online' }} readOnly onSaved={vi.fn()} />);
+    expect(screen.getByText('settings.repair.onlineTitle')).toBeInTheDocument();
+    expect(screen.queryByText('settings.repair.onlineHint')).not.toBeInTheDocument();
+  });
+
+  it('keeps the unchecked hint, which points at the Test Connection button that read-only users still have', async () => {
+    render(<AgentRepairPanel agent={{ ...sharedAgent, status: 'unchecked' }} readOnly onSaved={vi.fn()} />);
+
+    expect(await screen.findByText('settings.repair.uncheckedTitle')).toBeInTheDocument();
+    expect(screen.getByText('settings.repair.uncheckedHint')).toBeInTheDocument();
+  });
+
+  it('keeps loading the overrides for administrators', async () => {
+    vi.mocked(acpConversation.getAgentOverrides.invoke).mockResolvedValue({ command_override: '/custom/path/cli' });
+
+    render(<AgentRepairPanel agent={sharedAgent} readOnly={false} onSaved={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(acpConversation.getAgentOverrides.invoke).toHaveBeenCalledWith({ id: 'test-agent-2' });
+    });
+    expect(await screen.findByDisplayValue('/custom/path/cli')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /repair\.saveAndTest/ })).toBeInTheDocument();
+  });
+});

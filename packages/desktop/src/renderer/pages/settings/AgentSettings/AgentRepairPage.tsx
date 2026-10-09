@@ -10,7 +10,9 @@ import { ArrowLeft, Connection } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ipcBridge } from '@/common';
+import SharedConfigNotice from '@/renderer/components/settings/SharedConfigNotice';
 import { useManagedAgents } from '@/renderer/hooks/agent/useManagedAgents';
+import { useCanManageSharedConfig } from '@/renderer/hooks/system/useCanManageSharedConfig';
 import { formatManagedAgentDiagnosticMessage } from '@/renderer/utils/model/agentTypes';
 import AgentRepairPanel from './AgentRepairPanel';
 import { BoundAssistantList, getBoundAssistants, useAssistantsForAgents } from './BoundAssistants';
@@ -23,6 +25,9 @@ const AgentRepairPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { agents, isRefreshing, refreshCatalog } = useManagedAgents();
   const { assistants } = useAssistantsForAgents();
+  // The launch path and environment variables are shared by every user: only the admin can read and change
+  // them, everyone else sees the status and can still test the connection.
+  const canManage = useCanManageSharedConfig();
   const [isTesting, setIsTesting] = useState(false);
 
   const agent = agents.find((a) => a.id === id);
@@ -133,7 +138,12 @@ const AgentRepairPage: React.FC = () => {
 
       <div data-testid='agent-repair-body' className='relative min-h-0 flex-1 overflow-auto px-18px py-18px pb-24px'>
         <div className='mx-auto w-full max-w-760px'>
-          <AgentRepairPanel agent={agent} onSaved={handleSaved} />
+          <SharedConfigNotice
+            canManage={canManage}
+            adminText={t('settings.sharedConfig.agentsAdmin')}
+            readonlyText={t('settings.sharedConfig.agentsReadonly')}
+          />
+          <AgentRepairPanel agent={agent} onSaved={handleSaved} readOnly={!canManage} />
 
           {/* Which assistants depend on this agent — clicking one jumps to its
               detail/editor so the user can see and adjust the binding. */}

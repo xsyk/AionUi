@@ -6,11 +6,13 @@
  * Render test for the LocalAgents settings surface. Its purpose is to lock in
  * that LocalAgents reads the management view (`useManagedAgents`) — the
  * include_disabled data path that keeps user-disabled agents listed — and
- * derives the detected/custom sections from it.
+ * derives the detected/custom sections from it. It also covers the shared-config
+ * rule: only the administrator can change agents, everyone else gets a read-only
+ * list they can still test connections from.
  */
 
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 
 // t() echoes the key so section labels/buttons are assertable.
@@ -79,17 +81,36 @@ vi.mock('@/common', () => ({
   },
 }));
 
+// Who is looking at the page. The agents are shared by the whole server, so the signed-in user's admin flag
+// (or, without a user, the desktop app) decides whether the page is editable.
+type MockAuthUser = { id: string; is_super_admin?: boolean; username: string };
+const ADMIN_USER: MockAuthUser = { id: 'system_default_user', is_super_admin: true, username: 'admin' };
+const REGULAR_USER: MockAuthUser = { id: 'user-2', is_super_admin: false, username: 'bob' };
+const { viewer } = vi.hoisted(() => ({
+  viewer: { isDesktop: false, user: null as MockAuthUser | null },
+}));
+vi.mock('@/renderer/hooks/context/AuthContext', () => ({
+  useAuth: () => ({ user: viewer.user }),
+}));
+
 vi.mock('@renderer/utils/platform', async () => {
   const actual = await vi.importActual<typeof import('@renderer/utils/platform')>('@renderer/utils/platform');
   return {
     ...actual,
+    isElectronDesktop: () => viewer.isDesktop,
     openExternalUrl,
   };
 });
 
-// Keep the test focused on LocalAgents' own logic — stub heavy children.
-vi.mock('@/renderer/components/base/AionModal', () => ({ default: () => null }));
-vi.mock('@renderer/pages/settings/AgentSettings/InlineAgentEditor', () => ({ default: () => null }));
+// Keep the test focused on LocalAgents' own logic — stub heavy children. While open, the modal and the
+// editor leave a marker behind so a test can tell whether the custom-agent editor was reachable.
+vi.mock('@/renderer/components/base/AionModal', () => ({
+  default: ({ visible, children }: { visible?: boolean; children?: React.ReactNode }) =>
+    visible ? <div data-testid='agent-editor-modal'>{children}</div> : null,
+}));
+vi.mock('@renderer/pages/settings/AgentSettings/InlineAgentEditor', () => ({
+  default: () => <div data-testid='inline-agent-editor-stub' />,
+}));
 vi.mock('@renderer/pages/settings/AgentSettings/AgentHubModal', () => ({ AgentHubModal: () => null }));
 
 import LocalAgents from '@renderer/pages/settings/AgentSettings/LocalAgents';
@@ -146,6 +167,12 @@ const makeAgents = () => [
     status: 'offline',
   },
 ];
+
+beforeEach(() => {
+  // Default to the administrator in a browser: the page the tests that predate the shared-config rule expect.
+  viewer.isDesktop = false;
+  viewer.user = ADMIN_USER;
+});
 
 describe('LocalAgents', () => {
   it('runs the health probe and shows a success toast after an official-agent test connection succeeds', async () => {
@@ -449,5 +476,163 @@ describe('LocalAgents', () => {
     fireEvent.click(unavailableTab);
     expect(screen.queryByText('Aion CLI')).toBeNull();
     expect(screen.getByText('Claude Code')).toBeInTheDocument();
+  });
+});
+
+describe('LocalAgents shared configuration', () => {
+  const rowIds = ['aionrs', 'acp-claude', 'custom-1'];
+  const checkHealth = () => vi.mocked(ipcBridge.acpConversation.checkManagedAgentHealthById.invoke);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useManagedAgents.mockReturnValue({
+      agents: makeAgents(),
+      revalidate: vi.fn(),
+      refreshCatalog: vi.fn().mockResolvedValue(undefined),
+    });
+  });
+
+  it('tells administrators the agent settings apply to everyone and keeps every management control', () => {
+    render(<LocalAgents />);
+
+    expect(screen.getByText('settings.sharedConfig.agentsAdmin')).toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.agentsReadonly')).not.toBeInTheDocument();
+    expect(screen.getByTestId('btn-add-custom-agent')).toBeInTheDocument();
+    rowIds.forEach((id) => {
+      expect(screen.getByTestId(`agent-row-test-${id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`agent-row-edit-${id}`)).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('agent-row-definition-custom-1')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-row-delete-custom-1')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeEnabled();
+  });
+
+  it('lets administrators open the custom agent editor from the pencil on a row', () => {
+    render(<LocalAgents />);
+    expect(screen.queryByTestId('agent-editor-modal')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('agent-row-definition-custom-1'));
+    expect(
+      within(screen.getByTestId('agent-editor-modal')).getByTestId('inline-agent-editor-stub')
+    ).toBeInTheDocument();
+  });
+
+  it('lets administrators add a custom agent by hand from the add menu', async () => {
+    render(<LocalAgents />);
+
+    fireEvent.click(screen.getByTestId('btn-add-custom-agent'));
+    fireEvent.click(await screen.findByText('settings.talkToButler.addManually'));
+
+    expect(await screen.findByTestId('agent-editor-modal')).toBeInTheDocument();
+  });
+
+  it('lets administrators delete a custom agent', async () => {
+    const refreshCatalog = vi.fn().mockResolvedValue(undefined);
+    useManagedAgents.mockReturnValue({ agents: makeAgents(), revalidate: vi.fn(), refreshCatalog });
+    vi.mocked(ipcBridge.acpConversation.deleteCustomAgent.invoke).mockResolvedValue({ deleted: true });
+    render(<LocalAgents />);
+
+    fireEvent.click(screen.getByTestId('agent-row-delete-custom-1'));
+
+    await waitFor(() => {
+      expect(ipcBridge.acpConversation.deleteCustomAgent.invoke).toHaveBeenCalledWith({ id: 'custom-1' });
+      expect(refreshCatalog).toHaveBeenCalled();
+    });
+  });
+
+  it('shows non-admin users a read-only notice and no way to add, edit or delete agents', () => {
+    viewer.user = REGULAR_USER;
+    render(<LocalAgents />);
+
+    expect(screen.getByText('settings.sharedConfig.agentsReadonly')).toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.agentsAdmin')).not.toBeInTheDocument();
+
+    // No "add custom agent" entry, neither the button nor its via-chat / manual menu.
+    expect(screen.queryByTestId('btn-add-custom-agent')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.agentManagement.addCustomAgent')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.talkToButler.addViaChat')).not.toBeInTheDocument();
+
+    // No edit on any row (neither the Edit button to the settings page nor the pencil of the definition editor)
+    // and no delete.
+    rowIds.forEach((id) => {
+      expect(screen.queryByTestId(`agent-row-edit-${id}`)).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText('common.edit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-definition-custom-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-delete-custom-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-editor-modal')).not.toBeInTheDocument();
+  });
+
+  it('still lists every agent with its status, search and availability tabs for non-admin users', () => {
+    viewer.user = REGULAR_USER;
+    render(<LocalAgents />);
+
+    expect(screen.getByText('Aion CLI')).toBeInTheDocument();
+    expect(screen.getByText('Claude Code')).toBeInTheDocument();
+    expect(screen.getByText('My Agent')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-row-status-aionrs')).toHaveTextContent('settings.agentManagement.statusOnline');
+    expect(screen.getByTestId('agent-row-status-custom-1')).toHaveTextContent('settings.agentManagement.statusOffline');
+    expect(screen.getByTestId('input-search-agents')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-tab-available')).toBeInTheDocument();
+  });
+
+  it('keeps the test-connection action on every row for non-admin users', async () => {
+    viewer.user = REGULAR_USER;
+    const refreshCatalog = vi.fn().mockResolvedValue(undefined);
+    useManagedAgents.mockReturnValue({ agents: makeAgents(), revalidate: vi.fn(), refreshCatalog });
+    checkHealth().mockResolvedValue({ ...makeAgents()[3], status: 'online' });
+    render(<LocalAgents />);
+
+    rowIds.forEach((id) => {
+      expect(screen.getByTestId(`agent-row-test-${id}`)).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId('agent-row-test-custom-1'));
+
+    await waitFor(() => {
+      expect(checkHealth()).toHaveBeenCalledWith({ id: 'custom-1' });
+      expect(refreshCatalog).toHaveBeenCalled();
+      expect(messageSuccess).toHaveBeenCalledWith('settings.agentManagement.testConnectionOnline');
+    });
+  });
+
+  it('disables the enable switch of a custom agent for non-admin users and saves nothing when it is clicked', () => {
+    viewer.user = REGULAR_USER;
+    render(<LocalAgents />);
+
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(toggle);
+
+    expect(ipcBridge.acpConversation.setAgentEnabled.invoke).not.toHaveBeenCalled();
+  });
+
+  it('still opens the status page when a non-admin user clicks a row', () => {
+    viewer.user = REGULAR_USER;
+    render(<LocalAgents />);
+
+    fireEvent.click(screen.getByTestId('agent-row-custom-1'));
+
+    expect(navigate).toHaveBeenCalledWith('/settings/agent/custom-1/repair');
+  });
+
+  it('keeps full control in the desktop app, which has no signed-in user', () => {
+    viewer.user = null;
+    viewer.isDesktop = true;
+    render(<LocalAgents />);
+
+    expect(screen.getByText('settings.sharedConfig.agentsAdmin')).toBeInTheDocument();
+    expect(screen.getByTestId('btn-add-custom-agent')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-row-delete-custom-1')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeEnabled();
+  });
+
+  it('keeps a browser without a signed-in user read-only', () => {
+    viewer.user = null;
+    viewer.isDesktop = false;
+    render(<LocalAgents />);
+
+    expect(screen.getByText('settings.sharedConfig.agentsReadonly')).toBeInTheDocument();
+    expect(screen.queryByTestId('btn-add-custom-agent')).not.toBeInTheDocument();
   });
 });

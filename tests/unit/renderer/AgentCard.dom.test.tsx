@@ -6,7 +6,10 @@
  * Unit tests for AgentCard — the assistant-style row used on the Agent
  * settings page. Covers the disabled-agent treatment (a toggled-off custom
  * agent stays visible but greyed), the status tags, and the per-row
- * test-connection / edit actions shared by official and custom agents.
+ * test-connection / edit actions shared by official and custom agents. A
+ * read-only card (agents are shared by the whole server and only the
+ * administrator can change them) keeps the status and test connection but
+ * drops every action that writes.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -208,5 +211,131 @@ describe('AgentCard (official variant)', () => {
 
     fireEvent.click(screen.getByText('common.edit'));
     expect(onConfigure).toHaveBeenCalled();
+  });
+});
+
+describe('AgentCard (administrator)', () => {
+  it('offers the definition editor and delete next to the enable switch of a custom agent', () => {
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <AgentCard
+        type='custom'
+        agent={{
+          ...baseAgent,
+          enabled: true,
+          agent_type: 'acp',
+          agent_source: 'custom',
+          installed: true,
+          status: 'online',
+        }}
+        boundAssistants={[]}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggle={vi.fn()}
+        onTestConnection={vi.fn()}
+        onConfigure={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('switch')).toBeEnabled();
+    fireEvent.click(screen.getByTestId('agent-row-definition-agent-1'));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('agent-row-delete-agent-1'));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AgentCard (read-only)', () => {
+  const renderReadOnlyCustom = (handlers: Partial<{ onTestConnection: () => void; onConfigure: () => void }> = {}) => {
+    const props = {
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onToggle: vi.fn(),
+      onTestConnection: handlers.onTestConnection ?? vi.fn(),
+      onConfigure: handlers.onConfigure ?? vi.fn(),
+    };
+    render(
+      <AgentCard
+        type='custom'
+        readOnly
+        agent={{
+          ...baseAgent,
+          enabled: true,
+          agent_type: 'acp',
+          agent_source: 'custom',
+          installed: true,
+          status: 'online',
+        }}
+        boundAssistants={[]}
+        {...props}
+      />
+    );
+    return props;
+  };
+
+  it('keeps the status and test connection of a custom agent but offers no edit, definition editor or delete', () => {
+    const { onTestConnection } = renderReadOnlyCustom();
+
+    expect(screen.getByText('Hermes')).toBeInTheDocument();
+    expect(screen.getByText('settings.agentManagement.statusOnline')).toBeInTheDocument();
+    expect(screen.queryByText('common.edit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-edit-agent-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-definition-agent-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-delete-agent-1')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('settings.agentManagement.testConnection'));
+    expect(onTestConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the enable state of a custom agent on a disabled switch that changes nothing', () => {
+    const { onToggle } = renderReadOnlyCustom();
+
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(toggle);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('still opens the status page when the row is clicked', () => {
+    const onConfigure = vi.fn();
+    renderReadOnlyCustom({ onConfigure });
+
+    fireEvent.click(screen.getByTestId('agent-row-agent-1'));
+    expect(onConfigure).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the status and test connection of an official agent but offers no edit action', () => {
+    const onTestConnection = vi.fn();
+    render(
+      <AgentCard
+        type='official'
+        readOnly
+        agent={
+          {
+            id: 'claude',
+            name: 'Claude Code',
+            agent_type: 'acp',
+            agent_source: 'builtin',
+            backend: 'claude',
+            enabled: true,
+            installed: false,
+            status: 'missing',
+          } as never
+        }
+        boundAssistants={[]}
+        onTestConnection={onTestConnection}
+        onConfigure={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('settings.agentManagement.statusMissing')).toBeInTheDocument();
+    expect(screen.queryByText('common.edit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-row-edit-claude')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('agent-row-test-claude'));
+    expect(onTestConnection).toHaveBeenCalledTimes(1);
   });
 });

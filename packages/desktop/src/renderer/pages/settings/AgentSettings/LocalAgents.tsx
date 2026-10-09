@@ -13,8 +13,10 @@ import {
 } from '@/renderer/utils/model/agentTypes';
 import AionModal from '@/renderer/components/base/AionModal';
 import { AionSearchInput } from '@/renderer/components/base';
+import SharedConfigNotice from '@/renderer/components/settings/SharedConfigNotice';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useManagedAgents } from '@/renderer/hooks/agent/useManagedAgents';
+import { useCanManageSharedConfig } from '@/renderer/hooks/system/useCanManageSharedConfig';
 import { openExternalUrl } from '@/renderer/utils/platform';
 import { Button, Message, Typography } from '@arco-design/web-react';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
@@ -39,6 +41,9 @@ const LocalAgents: React.FC = () => {
   const navigate = useNavigate();
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
+  // Agents are shared by every user: only the admin can add, change or switch them, others get a read-only list
+  // they can still test connections from.
+  const canManage = useCanManageSharedConfig();
   const [testingAgentId, setTestingAgentId] = useState<string | null>(null);
   const [agentFilter, setAgentFilter] = useState<AgentAvailabilityFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -231,16 +236,18 @@ const LocalAgents: React.FC = () => {
                 onChange={setSearchQuery}
               />
             )}
-            <TalkToButlerButton
-              label={t('settings.agentManagement.addCustomAgent', { defaultValue: 'Add custom Agent' })}
-              chatLabel={t('settings.talkToButler.addViaChat', { defaultValue: 'Add via chat' })}
-              onManual={openCustomAgentEditor}
-              manualLabel={t('settings.talkToButler.addManually', { defaultValue: 'Add manually' })}
-              prompt={t('settings.talkToButler.prompt.addCustomAgent', {
-                defaultValue: 'Help me add a custom Agent.',
-              })}
-              data-testid='btn-add-custom-agent'
-            />
+            {canManage && (
+              <TalkToButlerButton
+                label={t('settings.agentManagement.addCustomAgent', { defaultValue: 'Add custom Agent' })}
+                chatLabel={t('settings.talkToButler.addViaChat', { defaultValue: 'Add via chat' })}
+                onManual={openCustomAgentEditor}
+                manualLabel={t('settings.talkToButler.addManually', { defaultValue: 'Add manually' })}
+                prompt={t('settings.talkToButler.prompt.addCustomAgent', {
+                  defaultValue: 'Help me add a custom Agent.',
+                })}
+                data-testid='btn-add-custom-agent'
+              />
+            )}
           </>
         }
         tabs={[
@@ -264,6 +271,12 @@ const LocalAgents: React.FC = () => {
         onTabChange={(key) => setAgentFilter(key as AgentAvailabilityFilter)}
       />
 
+      <SharedConfigNotice
+        canManage={canManage}
+        adminText={t('settings.sharedConfig.agentsAdmin')}
+        readonlyText={t('settings.sharedConfig.agentsReadonly')}
+      />
+
       {isRefreshing ? (
         <div className='text-11px text-t-tertiary'>{t('settings.agentManagement.refreshingStatuses')}</div>
       ) : null}
@@ -280,6 +293,7 @@ const LocalAgents: React.FC = () => {
               onTestConnection={() => void handleTestConnection(agent.id)}
               onConfigure={() => openAgentConfig(agent.id)}
               isTesting={testingAgentId === agent.id}
+              readOnly={!canManage}
             />
           ))}
           {visibleOfficialAgents.length === 0 && (
@@ -352,6 +366,7 @@ const LocalAgents: React.FC = () => {
               onTestConnection={() => void handleTestConnection(agent.id)}
               onConfigure={() => openAgentConfig(agent.id)}
               isTesting={testingAgentId === agent.id}
+              readOnly={!canManage}
               onEdit={() => {
                 setEditingAgent(agent);
                 setEditorVisible(true);

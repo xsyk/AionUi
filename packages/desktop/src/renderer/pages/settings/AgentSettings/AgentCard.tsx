@@ -26,6 +26,11 @@ type AgentCardProps =
       onTestConnection: () => void;
       onConfigure: () => void;
       isTesting?: boolean;
+      /**
+       * The viewer may not change the shared agent settings: the row keeps the
+       * status and "test connection" but drops every action that writes.
+       */
+      readOnly?: boolean;
     }
   | {
       type: 'custom';
@@ -34,6 +39,8 @@ type AgentCardProps =
       onTestConnection: () => void;
       onConfigure: () => void;
       isTesting?: boolean;
+      /** Same as the official variant; the enable switch stays visible but disabled. */
+      readOnly?: boolean;
       onEdit: () => void;
       onDelete: () => void;
       onToggle: (enabled: boolean) => void;
@@ -99,12 +106,14 @@ const statusLabelKey = (display: DisplayStatus) => {
  * Single agent row. Clicking anywhere on the row opens the configuration /
  * editor page; inner controls call `stopPropagation` so they don't trigger
  * the row navigation. Official and custom agents share the same row layout;
- * custom agents add an enable switch and a delete action.
+ * custom agents add an enable switch and a delete action. A read-only row
+ * (the agent settings belong to the administrator) keeps the status, the
+ * bound assistants and "test connection", and still opens the details page.
  */
 const AgentCard: React.FC<AgentCardProps> = (props) => {
   const { t } = useTranslation();
   const logos = useAgentLogos();
-  const { agent, boundAssistants, onTestConnection, onConfigure, isTesting } = props;
+  const { agent, boundAssistants, onTestConnection, onConfigure, isTesting, readOnly = false } = props;
 
   const isCustom = props.type === 'custom';
   const isDisabled = isCustom && agent.enabled === false;
@@ -180,36 +189,46 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
         </Button>
         {/* Both agent kinds get an explicit Edit button that opens the same
             configuration page the whole row links to (status, path/env
-            overrides, bound assistants). */}
-        <Button
-          data-testid={`agent-row-edit-${agent.id}`}
-          size='small'
-          type='outline'
-          onClick={onConfigure}
-          className='!h-30px !rounded-8px !border-border-2 !bg-base !px-10px !text-12px !font-500 !text-t-primary hover:!border-border-1 hover:!bg-fill-1'
-        >
-          {t('common.edit', { defaultValue: 'Edit' })}
-        </Button>
+            overrides, bound assistants). A read-only viewer has nothing to
+            edit there; the row itself still opens the page for the status. */}
+        {!readOnly && (
+          <Button
+            data-testid={`agent-row-edit-${agent.id}`}
+            size='small'
+            type='outline'
+            onClick={onConfigure}
+            className='!h-30px !rounded-8px !border-border-2 !bg-base !px-10px !text-12px !font-500 !text-t-primary hover:!border-border-1 hover:!bg-fill-1'
+          >
+            {t('common.edit', { defaultValue: 'Edit' })}
+          </Button>
+        )}
         {props.type === 'custom' ? (
           <>
             {/* Custom agents add the definition editor (command/args/env) plus
-                enable/delete — controls that have no meaning for built-ins. */}
-            <Switch size='small' checked={agent.enabled !== false} onChange={props.onToggle} />
-            <Button
-              size='small'
-              type='outline'
-              icon={<EditTwo theme='outline' size='14' />}
-              onClick={props.onEdit}
-              className='!h-30px !rounded-8px !border-border-2 !bg-base !text-t-primary hover:!border-border-1 hover:!bg-fill-1'
-            />
-            <Button
-              size='small'
-              type='outline'
-              status='danger'
-              icon={<Delete theme='outline' size='14' />}
-              onClick={props.onDelete}
-              className='!h-30px !rounded-8px !border-danger-2 !bg-base'
-            />
+                enable/delete — controls that have no meaning for built-ins.
+                The switch stays for a read-only viewer to show the state. */}
+            <Switch size='small' checked={agent.enabled !== false} disabled={readOnly} onChange={props.onToggle} />
+            {!readOnly && (
+              <>
+                <Button
+                  data-testid={`agent-row-definition-${agent.id}`}
+                  size='small'
+                  type='outline'
+                  icon={<EditTwo theme='outline' size='14' />}
+                  onClick={props.onEdit}
+                  className='!h-30px !rounded-8px !border-border-2 !bg-base !text-t-primary hover:!border-border-1 hover:!bg-fill-1'
+                />
+                <Button
+                  data-testid={`agent-row-delete-${agent.id}`}
+                  size='small'
+                  type='outline'
+                  status='danger'
+                  icon={<Delete theme='outline' size='14' />}
+                  onClick={props.onDelete}
+                  className='!h-30px !rounded-8px !border-danger-2 !bg-base'
+                />
+              </>
+            )}
           </>
         ) : null}
       </div>
