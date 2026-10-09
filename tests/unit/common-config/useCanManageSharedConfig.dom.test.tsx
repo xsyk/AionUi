@@ -22,7 +22,7 @@ vi.mock('@/renderer/utils/platform', () => ({
   isElectronDesktop: () => mocks.isDesktop,
 }));
 
-import { useCanManageSharedConfig } from '@/renderer/hooks/system/useCanManageSharedConfig';
+import { useCanManageSharedConfig } from '@/renderer/hooks/context/useCanManageSharedConfig';
 
 describe('useCanManageSharedConfig', () => {
   beforeEach(() => {

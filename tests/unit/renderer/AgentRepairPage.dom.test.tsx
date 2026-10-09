@@ -170,12 +170,15 @@ describe('AgentRepairPage shared configuration', () => {
     });
   });
 
-  it('keeps the desktop app, which has no signed-in user, editable', () => {
+  it('keeps the desktop app, which has no signed-in user, editable and shows no shared-configuration notice', () => {
     viewer.user = null;
     viewer.isDesktop = true;
     render(<AgentRepairPage />);
 
-    expect(screen.getByText('settings.sharedConfig.agentsAdmin')).toBeInTheDocument();
+    // The desktop app has a single user, so "applies to everyone" would mean nothing there.
+    expect(screen.queryByTestId('shared-config-notice')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.agentsAdmin')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.agentsReadonly')).not.toBeInTheDocument();
     expect(screen.getByTestId('agent-repair-panel-stub')).toHaveAttribute('data-readonly', 'false');
   });
 

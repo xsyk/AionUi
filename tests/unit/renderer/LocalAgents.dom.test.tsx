@@ -616,12 +616,15 @@ describe('LocalAgents shared configuration', () => {
     expect(navigate).toHaveBeenCalledWith('/settings/agent/custom-1/repair');
   });
 
-  it('keeps full control in the desktop app, which has no signed-in user', () => {
+  it('keeps full control in the desktop app, which has no signed-in user, and shows no shared-configuration notice', () => {
     viewer.user = null;
     viewer.isDesktop = true;
     render(<LocalAgents />);
 
-    expect(screen.getByText('settings.sharedConfig.agentsAdmin')).toBeInTheDocument();
+    // The desktop app has a single user, so "applies to everyone" would mean nothing there.
+    expect(screen.queryByTestId('shared-config-notice')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.agentsAdmin')).not.toBeInTheDocument();
+    expect(screen.queryByText('settings.sharedConfig.agentsReadonly')).not.toBeInTheDocument();
     expect(screen.getByTestId('btn-add-custom-agent')).toBeInTheDocument();
     expect(screen.getByTestId('agent-row-delete-custom-1')).toBeInTheDocument();
     expect(screen.getByRole('switch')).toBeEnabled();

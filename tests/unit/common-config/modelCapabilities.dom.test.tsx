@@ -776,6 +776,27 @@ describe('shared model configuration', () => {
     expect(screen.getByText('Anthropic')).toBeInTheDocument();
   });
 
+  it('points administrators to the configuration guide while no model is configured', () => {
+    mocks.providers.splice(0, mocks.providers.length);
+    render(<ModelModalContent />);
+
+    expect(screen.getByText('settings.noConfiguredModels')).toBeInTheDocument();
+    expect(screen.getByText(/settings\.needHelpConfigGuide/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'settings.configGuide' })).toBeInTheDocument();
+  });
+
+  it('keeps the configuration guide away from non-admin users, who cannot add models', () => {
+    mocks.authUser = REGULAR_USER;
+    mocks.providers.splice(0, mocks.providers.length);
+    render(<ModelModalContent />);
+
+    expect(screen.getByText('settings.noConfiguredModels')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'settings.configGuide' })).not.toBeInTheDocument();
+    // The sentence around the link goes with it, so no dangling "Need help? Check out the detailed ." is left.
+    expect(screen.queryByText(/settings\.needHelpConfigGuide/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/settings\.configGuideSuffix/)).not.toBeInTheDocument();
+  });
+
   it('does not save anything when a non-admin user clicks a switch or a protocol label', () => {
     mocks.authUser = REGULAR_USER;
     render(<ModelModalContent />);
@@ -809,10 +830,41 @@ describe('shared model configuration', () => {
     mocks.isDesktop = true;
     render(<ModelModalContent />);
 
-    expect(screen.getByText('settings.sharedConfig.modelsAdmin')).toBeInTheDocument();
     expect(screen.getByText('settings.addModel')).toBeInTheDocument();
+    expect(screen.getByText('settings.clearStatus')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'delete' })).toHaveLength(2);
     screen.getAllByRole('switch').forEach((toggle) => expect(toggle).toBeEnabled());
+  });
+
+  it('keeps the configuration guide in the desktop app while no model is configured', () => {
+    mocks.authUser = null;
+    mocks.isDesktop = true;
+    mocks.providers.splice(0, mocks.providers.length);
+    render(<ModelModalContent />);
+
+    expect(screen.getByRole('link', { name: 'settings.configGuide' })).toBeInTheDocument();
+  });
+
+  it.each(['modal', 'page'] as const)(
+    'shows no shared-configuration notice in the desktop app, which has a single user (%s view)',
+    (viewMode) => {
+      mocks.authUser = null;
+      mocks.isDesktop = true;
+      mocks.viewMode = viewMode;
+      render(<ModelModalContent />);
+
+      expect(screen.queryByTestId('shared-config-notice')).not.toBeInTheDocument();
+      expect(screen.queryByText('settings.sharedConfig.modelsAdmin')).not.toBeInTheDocument();
+      expect(screen.queryByText('settings.sharedConfig.modelsReadonly')).not.toBeInTheDocument();
+    }
+  );
+
+  it('announces the notice as a status, not as an alert', () => {
+    render(<ModelModalContent />);
+
+    expect(screen.getByTestId('shared-config-notice')).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('status')).toHaveTextContent('settings.sharedConfig.modelsAdmin');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('shows the notice under the page header and no header actions to non-admin users', () => {

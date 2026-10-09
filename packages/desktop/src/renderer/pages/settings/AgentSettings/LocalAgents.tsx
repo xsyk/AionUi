@@ -13,10 +13,10 @@ import {
 } from '@/renderer/utils/model/agentTypes';
 import AionModal from '@/renderer/components/base/AionModal';
 import { AionSearchInput } from '@/renderer/components/base';
-import SharedConfigNotice from '@/renderer/components/settings/SharedConfigNotice';
+import SharedConfigNotice from '@/renderer/components/settings/SettingsModal/SharedConfigNotice';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useManagedAgents } from '@/renderer/hooks/agent/useManagedAgents';
-import { useCanManageSharedConfig } from '@/renderer/hooks/system/useCanManageSharedConfig';
+import { useCanManageSharedConfig } from '@/renderer/hooks/context/useCanManageSharedConfig';
 import { openExternalUrl } from '@/renderer/utils/platform';
 import { Button, Message, Typography } from '@arco-design/web-react';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
