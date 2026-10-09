@@ -71,6 +71,18 @@
   --fill-white-to-black: #ffffff; /* 白到黑填充色 */
   --border-special: var(--bg-3); /* 特殊边框色 */
   --color-guid-agent-bar: #eaecf7; /* 首页 Agent 选择条背景 - 亮色 */
+
+  /* Login page - Light Mode（设计稿 ai/design/feishu-login-flow-ui.png） */
+  --login-bg-from: #b6c3fb; /* 页面背景渐变起点（左上） */
+  --login-bg-via: #93a5ef; /* 页面背景渐变中段 */
+  --login-bg-to: #7b8fe3; /* 页面背景渐变终点（右下） */
+  --login-bg-glow: rgba(255, 255, 255, 0.16); /* 背景光斑 */
+  --login-card-shadow: rgba(38, 50, 140, 0.18); /* 卡片阴影 */
+  --login-accent: #2e35f2; /* 标题、文字链接、复选框、转圈 */
+  --login-accent-from: #5468fe; /* 主按钮渐变起点 */
+  --login-accent-to: #484dfd; /* 主按钮渐变终点 */
+  --login-accent-soft: #eef1fe; /* 强调色浅底：提示框、链接悬停 */
+  --login-accent-ring: rgba(46, 53, 242, 0.16); /* 输入框焦点光圈 */
 }
 
 /* Dark Mode */
@@ -143,4 +155,16 @@
   --fill-0: rgba(255, 255, 255, 0.08); /* 填充色 0 - 暗色模式下为半透明白色 */
   --fill-white-to-black: #000000; /* 白到黑填充色（暗色模式下为黑色） */
   --border-special: #60677e; /* 特殊边框色 */
+
+  /* Login page - Dark Mode */
+  --login-bg-from: #232a52;
+  --login-bg-via: #1b2040;
+  --login-bg-to: #141830;
+  --login-bg-glow: rgba(255, 255, 255, 0.04);
+  --login-card-shadow: rgba(0, 0, 0, 0.45);
+  --login-accent: #9ca3ff;
+  --login-accent-from: #5468fe;
+  --login-accent-to: #484dfd;
+  --login-accent-soft: rgba(124, 134, 255, 0.16);
+  --login-accent-ring: rgba(156, 163, 255, 0.24);
 }

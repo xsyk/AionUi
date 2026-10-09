@@ -1,0 +1,390 @@
+/* Login page, after ai/design/feishu-login-flow-ui.png. Colors: the --login-* tokens in
+   styles/themes/default-color-scheme.css plus the shared text/border/background tokens. */
+
+.page {
+  position: fixed;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Helvetica Neue', Arial, 'Noto Sans',
+    sans-serif;
+  background: linear-gradient(135deg, var(--login-bg-from) 0%, var(--login-bg-via) 55%, var(--login-bg-to) 100%);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--login-bg-glow);
+}
+
+.glowTopEnd {
+  width: 620px;
+  height: 620px;
+  top: -260px;
+  inset-inline-end: -200px;
+}
+
+.glowBottomStart {
+  width: 520px;
+  height: 520px;
+  bottom: -260px;
+  inset-inline-start: -180px;
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 32px 16px;
+  box-sizing: border-box;
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  min-height: 560px;
+  box-sizing: border-box;
+  padding: 28px 36px 36px;
+  border-radius: 16px;
+  background: var(--bg-base);
+  box-shadow: 0 24px 64px var(--login-card-shadow);
+  animation: login-card-in 0.4s ease-out;
+}
+
+@keyframes login-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-inline-end: -12px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.logo {
+  width: 92px;
+  height: 92px;
+}
+
+.title {
+  margin: 8px 0 0;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--login-accent);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  font-size: 17px;
+  line-height: 26px;
+  color: var(--text-secondary);
+}
+
+/* ---- Feishu view ---- */
+
+.feishuPanel {
+  margin-top: 40px;
+}
+
+.primaryButton:global(.arco-btn) {
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--login-accent-from), var(--login-accent-to));
+  color: var(--text-white);
+  font-weight: 600;
+  transition:
+    filter 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.card .primaryButton:global(.arco-btn):not(:disabled):hover {
+  background: linear-gradient(90deg, var(--login-accent-from), var(--login-accent-to));
+  color: var(--text-white);
+  filter: brightness(1.06);
+  box-shadow: 0 8px 20px var(--login-accent-ring);
+  transform: translateY(-1px);
+}
+
+.feishuButton:global(.arco-btn) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 56px;
+  font-size: 18px;
+}
+
+.feishuMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--text-white);
+}
+
+.feishuMark img {
+  width: 22px;
+  height: 22px;
+}
+
+.caption {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--text-secondary);
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-base);
+}
+
+.card .switchLink:global(.arco-btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--login-accent);
+  background: transparent;
+}
+
+.card .switchLink:global(.arco-btn):not(:disabled):hover {
+  color: var(--login-accent);
+  background: var(--login-accent-soft);
+}
+
+/* ---- Password view ---- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.form .footer {
+  margin-top: 4px;
+}
+
+.field :global(.arco-input-inner-wrapper) {
+  height: 50px;
+  padding-inline: 16px 10px;
+  border: 1px solid var(--border-base);
+  border-radius: 10px;
+  background: var(--bg-base);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.field :global(.arco-input-inner-wrapper:hover) {
+  border-color: var(--bg-4);
+}
+
+.field :global(.arco-input-inner-wrapper.arco-input-inner-wrapper-focus) {
+  border-color: var(--login-accent);
+  box-shadow: 0 0 0 3px var(--login-accent-ring);
+}
+
+.field :global(.arco-input) {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.field :global(.arco-input-group-prefix) {
+  display: inline-flex;
+  padding-inline-end: 12px;
+  font-size: 20px;
+  color: var(--bg-6);
+}
+
+.field :global(.arco-input-group-suffix) {
+  display: inline-flex;
+}
+
+.card .visibilityToggle:global(.arco-btn) {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 20px;
+  color: var(--bg-6);
+  background: transparent;
+}
+
+.remember:global(.arco-checkbox) :global(.arco-checkbox-text) {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.remember:global(.arco-checkbox-checked) :global(.arco-checkbox-mask) {
+  background-color: var(--login-accent);
+  border-color: var(--login-accent);
+}
+
+.submitButton:global(.arco-btn) {
+  height: 48px;
+  font-size: 16px;
+}
+
+/* ---- Redirecting view ---- */
+
+.redirectingPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.spinner {
+  width: 84px;
+  height: 84px;
+  animation: login-spin 1.1s linear infinite;
+}
+
+.spinnerTrack,
+.spinnerArc {
+  fill: none;
+  stroke-width: 9;
+}
+
+.spinnerTrack {
+  stroke: var(--bg-3);
+}
+
+.spinnerArc {
+  stroke: var(--login-accent);
+  stroke-linecap: round;
+  stroke-dasharray: 90 150;
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hint {
+  margin: 22px 0 0;
+  text-align: center;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--text-secondary);
+}
+
+.privacyNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 32px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: var(--login-accent-soft);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-primary);
+}
+
+.privacyIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--login-accent);
+}
+
+/* ---- Shared ---- */
+
+.message {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.form .message {
+  margin-top: 0;
+}
+
+.messageError {
+  color: rgb(var(--danger-6));
+  background: var(--color-danger-light-1);
+  border: 1px solid var(--color-danger-light-2);
+}
+
+.messageSuccess {
+  color: rgb(var(--success-6));
+  background: var(--color-success-light-1);
+  border: 1px solid var(--color-success-light-2);
+}
+
+@media (max-width: 480px) {
+  .stage {
+    align-items: flex-start;
+    padding: 16px 12px;
+  }
+
+  .card {
+    min-height: 0;
+    padding: 20px 20px 28px;
+    border-radius: 14px;
+  }
+
+  .title {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .feishuPanel {
+    margin-top: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .spinner {
+    animation-duration: 3s;
+  }
+}

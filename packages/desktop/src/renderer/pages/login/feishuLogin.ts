@@ -22,19 +22,26 @@ export type FeishuLoginStatus = { enabled: boolean; publicBaseUrl: string | null
 
 const DISABLED: FeishuLoginStatus = { enabled: false, publicBaseUrl: null };
 
+/** Give up on the status check after this long and fall back to the password form. */
+export const FEISHU_STATUS_TIMEOUT_MS = 5000;
+
 /**
  * Public, pre-login check. Uses plain fetch (not httpBridge) so a failure
  * never triggers the session-refresh path or error logging noise.
  */
-export async function fetchFeishuLoginStatus(): Promise<FeishuLoginStatus> {
+export async function fetchFeishuLoginStatus(timeoutMs = FEISHU_STATUS_TIMEOUT_MS): Promise<FeishuLoginStatus> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch('/api/auth/feishu/status', { credentials: 'same-origin' });
+    const response = await fetch('/api/auth/feishu/status', { credentials: 'same-origin', signal: controller.signal });
     if (!response.ok) return DISABLED;
     const body = (await response.json()) as { data?: { enabled?: boolean; public_base_url?: string | null } };
     if (body.data?.enabled !== true) return DISABLED;
     return { enabled: true, publicBaseUrl: body.data.public_base_url || null };
   } catch {
     return DISABLED;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -57,4 +64,9 @@ export function feishuStartUrl(publicBaseUrl: string | null, currentOrigin: stri
 export function feishuErrorKey(code: string | null): string | null {
   if (!code) return null;
   return KNOWN_ERRORS.has(code) ? `login.feishu.errors.${code}` : 'login.feishu.errors.unknown';
+}
+
+/** Leaves the app for the Feishu authorization page (full-page navigation). */
+export function startFeishuLogin(status: FeishuLoginStatus): void {
+  window.location.assign(feishuStartUrl(status.publicBaseUrl, window.location.origin));
 }

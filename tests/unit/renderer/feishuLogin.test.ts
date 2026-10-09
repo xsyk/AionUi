@@ -60,6 +60,26 @@ describe('feishuLogin helpers', () => {
     await expect(fetchFeishuLoginStatus()).resolves.toEqual(disabled);
   });
 
+  it('gives up on a status check that never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          (_url: string, init?: RequestInit) =>
+            new Promise((_resolve, reject) => {
+              init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+            })
+        )
+      );
+      const pending = fetchFeishuLoginStatus(1000);
+      await vi.advanceTimersByTimeAsync(1000);
+      await expect(pending).resolves.toEqual({ enabled: false, publicBaseUrl: null });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('starts on the site URL when the page is served from another origin', () => {
     expect(feishuStartUrl(null, 'https://a.example.com')).toBe('/api/auth/feishu/start');
     expect(feishuStartUrl('https://a.example.com', 'https://a.example.com')).toBe('/api/auth/feishu/start');
