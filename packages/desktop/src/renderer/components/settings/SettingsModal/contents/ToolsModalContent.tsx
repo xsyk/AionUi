@@ -4,21 +4,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { ImageGenerationModelSetting } from '@/common/config/clientSettings';
-import { removeImageGenerationEnvKeys, resolveImageGenerationMcpEnv } from '@/common/config/imageGenerationMcpEnv';
-import { mcpService } from '@/common/adapter/ipcBridge';
-import { type IMcpServer, BUILTIN_IMAGE_GEN_ID, BUILTIN_IMAGE_GEN_NAME } from '@/common/config/storage';
+import { isBackendHttpError } from '@/common/adapter/httpBridge';
+import { imageGeneration } from '@/common/adapter/ipcBridge';
+import type { ImageGenerationSettings, ImageGenerationSettingsUpdate } from '@/common/config/clientSettings';
+import type { IMcpServer } from '@/common/config/storage';
 import { isImageGenSupported } from '@/common/utils/imageModelAllowlist';
-import { Divider, Form, Tooltip, Message, Modal, Switch } from '@arco-design/web-react';
+import { Alert, Divider, Form, Tooltip, Message, Modal, Switch } from '@arco-design/web-react';
 import { Help } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 import useConfigModelListWithImage from '@/renderer/hooks/agent/useConfigModelListWithImage';
 import AionScrollArea from '@/renderer/components/base/AionScrollArea';
 import AionSelect from '@/renderer/components/base/AionSelect';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
+import SharedConfigNotice from '@/renderer/components/settings/SettingsModal/SharedConfigNotice';
 import AddMcpServerModal from '@/renderer/pages/settings/components/AddMcpServerModal';
 import McpServerItem from '@/renderer/pages/settings/ToolsSettings/McpServerItem';
+import { useCanManageSharedConfig } from '@/renderer/hooks/context/useCanManageSharedConfig';
 import {
   useMcpServers,
   useMcpConnection,
@@ -27,23 +30,12 @@ import {
   useMcpOAuth,
   useMountedMessage,
 } from '@/renderer/hooks/mcp';
-import {
-  getClientBusinessSetting,
-  removeClientBusinessSetting,
-  setClientBusinessSetting,
-} from '@/renderer/services/clientBusinessSettings';
+import { isBuiltinImageGenServer } from '@/renderer/hooks/mcp/catalog';
 import classNames from 'classnames';
 import { useSettingsTabNavigate, useSettingsViewMode } from '../settingsViewContext';
 
 type MessageInstance = ReturnType<typeof Message.useMessage>[0];
 
-const isBuiltinImageGenServer = (server: IMcpServer) =>
-  server.builtin === true && (server.id === BUILTIN_IMAGE_GEN_ID || server.name === BUILTIN_IMAGE_GEN_NAME);
-const areEnvRecordsEqual = (a: Record<string, string>, b: Record<string, string>) => {
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  return aKeys.length === bKeys.length && aKeys.every((key) => a[key] === b[key]);
-};
 const ModalMcpManagementSection: React.FC<{
   message: MessageInstance;
   mcpServers: IMcpServer[];
@@ -266,222 +258,220 @@ const ModalMcpManagementSection: React.FC<{
   );
 };
 
-const ToolsModalContent: React.FC = () => {
+const IMAGE_GENERATION_SWR_KEY = 'settings.imageGeneration';
+
+// Arco's Alert puts role="alert" on its root, which screen readers announce assertively, but lets any extra prop
+// override it (AlertProps just does not declare `role`, hence the spread). This hint is static, so it is a status.
+const STATUS_ROLE_PROPS = { role: 'status' };
+
+const toModelOptionValue = (providerId: string, model: string) => `${providerId}|${model}`;
+
+/** Why the backend refused a save. A 400 carries the reason (unknown provider, model not offered, ...). */
+const getSaveRefusal = (error: unknown): string | undefined =>
+  isBackendHttpError(error) && error.status === 400 && error.backendMessage.trim() ? error.backendMessage : undefined;
+
+/**
+ * The image generation model. It is one setting for the whole server: the administrator chooses it and the
+ * backend adds the image generation MCP server to every session itself, so this section only reads and writes
+ * /api/settings/image-generation. Nothing here touches a per-user preference or a per-user MCP row.
+ */
+const ImageGenerationSection: React.FC<{ message: MessageInstance }> = ({ message }) => {
   const { t } = useTranslation();
+  const canManage = useCanManageSharedConfig();
+  const navigateToSettingsTab = useSettingsTabNavigate();
+  const { modelListWithImage: data } = useConfigModelListWithImage();
+  const {
+    data: settings,
+    isLoading,
+    mutate,
+  } = useSWR<ImageGenerationSettings>(IMAGE_GENERATION_SWR_KEY, () => imageGeneration.get.invoke());
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Providers that offer at least one image model the generation tool can use, with only those models.
+  const imageGenerationModelList = useMemo(
+    () =>
+      (data ?? []).flatMap((provider) => {
+        const models = provider.models.filter((modelName) => isImageGenSupported(provider, modelName));
+        return models.length > 0 ? [{ id: provider.id, name: provider.name, models }] : [];
+      }),
+    [data]
+  );
+
+  const save = useCallback(
+    async (update: ImageGenerationSettingsUpdate) => {
+      setIsSaving(true);
+      try {
+        await mutate(await imageGeneration.update.invoke(update), { revalidate: false });
+      } catch (error) {
+        console.error('[ImageGen] Failed to save the shared image generation setting:', error);
+        message.error(getSaveRefusal(error) ?? t('common.saveFailed'));
+        // A refusal can mean the server moved on (another admin, a deleted provider): show where it stands.
+        void mutate();
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [message, mutate, t]
+  );
+
+  const handleModelChange = useCallback(
+    (value: string) => {
+      if (!canManage || !settings) return;
+      for (const provider of imageGenerationModelList) {
+        const model = provider.models.find((modelName) => toModelOptionValue(provider.id, modelName) === value);
+        if (model !== undefined) {
+          // Picking a model never switches the tool on or off by itself.
+          void save({ provider_id: provider.id, model, enabled: settings.enabled });
+          return;
+        }
+      }
+    },
+    [canManage, imageGenerationModelList, save, settings]
+  );
+
+  const handleToggle = useCallback(
+    (checked: boolean) => {
+      if (!canManage || !settings) return;
+      void save({ provider_id: settings.provider_id, model: settings.model, enabled: checked });
+    },
+    [canManage, save, settings]
+  );
+
+  // Until the server has answered nothing is known, so nothing is claimed missing.
+  const isSupported = settings?.supported !== false;
+  const hasModel = Boolean(settings?.provider_id && settings.model);
+  // Only the administrator can change it, and not while it is unknown, being saved, or unable to run here.
+  const isLocked = !canManage || !settings || isSaving || !isSupported;
+  // Turning it on needs a model; turning it off is always possible.
+  const isSwitchDisabled = isLocked || (!settings?.enabled && !hasModel);
+  const selectedValue =
+    settings?.provider_id && settings.model ? toModelOptionValue(settings.provider_id, settings.model) : undefined;
+
+  return (
+    <div className='px-[12px] md:px-[32px] py-[24px] bg-2 rd-12px md:rd-16px border border-border-2 flex flex-col gap-16px'>
+      <div className='flex items-center justify-between'>
+        <span className='text-14px text-t-primary'>{t('settings.imageGeneration')}</span>
+        <Switch
+          data-testid='image-generation-switch'
+          aria-label={t('settings.imageGeneration')}
+          disabled={isSwitchDisabled}
+          checked={Boolean(settings?.enabled) && isSupported}
+          loading={isLoading}
+          onChange={handleToggle}
+        />
+      </div>
+
+      <SharedConfigNotice
+        canManage={canManage}
+        adminText={t('settings.sharedConfig.imageAdmin')}
+        readonlyText={t('settings.sharedConfig.imageReadonly')}
+      />
+      {settings?.supported === false && (
+        <Alert
+          type='warning'
+          {...STATUS_ROLE_PROPS}
+          content={t('settings.sharedConfig.imageUnsupported')}
+          className='!rounded-8px'
+          data-testid='image-generation-unsupported'
+        />
+      )}
+
+      <Divider className='!my-0' />
+
+      <Form layout='horizontal' labelAlign='left' className='space-y-12px'>
+        <Form.Item
+          label={t('settings.imageGenerationModel')}
+          tooltip={
+            <div className='space-y-4px'>
+              <div>{t('settings.imageGenSupportedTooltipTitle')}</div>
+              <ul className='list-disc ps-16px m-0'>
+                <li>{t('settings.imageGenSupportedTooltipGemini')}</li>
+                <li>{t('settings.imageGenSupportedTooltipOpenRouter')}</li>
+                <li>{t('settings.imageGenSupportedTooltipAntigravity')}</li>
+              </ul>
+              <div>{t('settings.imageGenUnsupportedTooltip')}</div>
+            </div>
+          }
+        >
+          {imageGenerationModelList.length > 0 ? (
+            <AionSelect
+              value={selectedValue}
+              disabled={isLocked}
+              // The saved choice can name a model the list no longer offers (its provider was removed or
+              // changed); show the model name rather than the raw "provider|model" value.
+              renderFormat={(option) => option?.children ?? settings?.model}
+              onChange={handleModelChange}
+            >
+              {imageGenerationModelList.map(({ id, name, models }) => (
+                <AionSelect.OptGroup label={name} key={id}>
+                  {models.map((modelName) => (
+                    <AionSelect.Option key={id + modelName} value={toModelOptionValue(id, modelName)}>
+                      {modelName}
+                    </AionSelect.Option>
+                  ))}
+                </AionSelect.OptGroup>
+              ))}
+            </AionSelect>
+          ) : (
+            <div className='text-t-secondary flex items-center'>
+              {t('settings.noAvailable')}
+              {/* Models are added by the administrator; for everyone else there is nothing to go and configure. */}
+              {canManage &&
+                (navigateToSettingsTab ? (
+                  <a
+                    className='text-inherit underline underline-offset-2 cursor-pointer'
+                    onClick={() => navigateToSettingsTab('model')}
+                  >
+                    {t('settings.goToModelSettings')}
+                  </a>
+                ) : (
+                  t('settings.goToModelSettings')
+                ))}
+              {canManage && (
+                <Tooltip
+                  content={
+                    <div>
+                      {t('settings.needHelpTooltip')}
+                      <a
+                        href='https://github.com/iOfficeAI/AionUi/wiki/AionUi-Image-Generation-Tool-Model-Configuration-Guide'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-[rgb(var(--primary-6))] hover:text-[rgb(var(--primary-5))] underline ms-4px'
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {t('settings.configGuide')}
+                      </a>
+                    </div>
+                  }
+                >
+                  <a
+                    href='https://github.com/iOfficeAI/AionUi/wiki/AionUi-Image-Generation-Tool-Model-Configuration-Guide'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='ms-8px text-[rgb(var(--primary-6))] hover:text-[rgb(var(--primary-5))] cursor-pointer'
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Help theme='outline' size='14' />
+                  </a>
+                </Tooltip>
+              )}
+            </div>
+          )}
+        </Form.Item>
+      </Form>
+    </div>
+  );
+};
+
+const ToolsModalContent: React.FC = () => {
   const [rawMcpMessage, mcpMessageContext] = Message.useMessage({ maxCount: 10 });
   // ELECTRON-1A1: guard message calls so async MCP callbacks that resolve after this
   // component unmounts don't hit a null Arco context holder (null.addInstance crash).
   const mcpMessage = useMountedMessage(rawMcpMessage);
-  const [imageGenerationModel, setImageGenerationModel] = useState<ImageGenerationModelSetting | undefined>();
-  const [isUpdatingImageGeneration, setIsUpdatingImageGeneration] = useState(false);
-  const { modelListWithImage: data } = useConfigModelListWithImage();
-  const { mcpServers, extensionMcpServers, saveMcpServers, setMcpServers, isMcpServersLoading } = useMcpServers();
-  const builtinImageGenServer = useMemo(() => mcpServers.find(isBuiltinImageGenServer), [mcpServers]);
-  const isImageGenerationServerLoading = isMcpServersLoading && !builtinImageGenServer;
-
-  const imageGenerationModelList = useMemo(() => {
-    if (!data) return [];
-    return (data || [])
-      .map((provider) => ({
-        ...provider,
-        models: provider.models.filter((modelName) => isImageGenSupported(provider, modelName)),
-      }))
-      .filter((provider) => provider.models.length > 0);
-  }, [data]);
-
-  useEffect(() => {
-    const loadConfigs = async () => {
-      try {
-        const storedModel = await getClientBusinessSetting('tools.imageGenerationModel');
-        if (storedModel) {
-          setImageGenerationModel(storedModel);
-        }
-      } catch (error) {
-        console.error('Failed to load tools config:', error);
-      }
-    };
-
-    void loadConfigs();
-  }, []);
-
-  // Sync image generation model config to the built-in MCP server's transport.env
-  const syncMcpServerEnv = useCallback(
-    async (model: Partial<ImageGenerationModelSetting>) => {
-      const builtinServer = mcpServers.find(isBuiltinImageGenServer);
-      if (!builtinServer || builtinServer.transport.type !== 'stdio') return;
-
-      const existingEnv = builtinServer.transport.env || {};
-      let env: Record<string, string>;
-
-      if (!model.id && !model.use_model) {
-        env = removeImageGenerationEnvKeys(existingEnv);
-        console.info('[ImageGen] Cleared built-in MCP image env because image generation model is unset');
-      } else {
-        const resolution = resolveImageGenerationMcpEnv(model, data || [], existingEnv);
-        if (resolution.ok === false) {
-          console.error('[ImageGen] Failed to resolve image MCP provider', {
-            reason: resolution.reason,
-            message: resolution.message,
-            candidates: resolution.candidates,
-          });
-          throw new Error(resolution.message);
-        }
-
-        env = {
-          ...removeImageGenerationEnvKeys(existingEnv),
-          ...resolution.env,
-        };
-        console.info(
-          '[ImageGen] Syncing built-in MCP image env via %s, provider id: %s, platform: %s, model: %s, api key present: %s',
-          resolution.source,
-          resolution.provider.id,
-          resolution.provider.platform,
-          resolution.model,
-          resolution.provider.api_key ? 'yes' : 'no'
-        );
-      }
-
-      if (areEnvRecordsEqual(existingEnv, env)) {
-        return;
-      }
-
-      const updatedTransport = { ...builtinServer.transport, env };
-      const original_json = JSON.stringify(
-        {
-          mcpServers: {
-            [builtinServer.name]: {
-              command: updatedTransport.command,
-              args: updatedTransport.args || [],
-              env,
-            },
-          },
-        },
-        null,
-        2
-      );
-
-      const updatedServer = await mcpService.updateServer.invoke({
-        id: builtinServer.id,
-        data: {
-          transport: updatedTransport,
-          original_json,
-        },
-      });
-      await saveMcpServers((prevServers) =>
-        prevServers.map((server) => (server.id === updatedServer.id ? { ...server, ...updatedServer } : server))
-      );
-    },
-    [data, mcpServers, saveMcpServers]
-  );
-
-  // Keep the saved image model as a provider/model reference. Secrets stay in providers.
-  useEffect(() => {
-    if (!imageGenerationModel || !data) return;
-
-    const currentProvider = data.find((p) => p.id === imageGenerationModel.id);
-
-    if (!currentProvider) {
-      setImageGenerationModel(undefined);
-      removeClientBusinessSetting('tools.imageGenerationModel').catch((error) => {
-        console.error('Failed to remove image generation model config:', error);
-      });
-      void syncMcpServerEnv({}).catch((error) => {
-        console.error('Failed to clear image generation MCP env after provider removal:', error);
-      });
-      return;
-    }
-
-    const sanitizedModel = {
-      ...imageGenerationModel,
-      name: currentProvider.name,
-      platform: currentProvider.platform,
-      base_url: '',
-      api_key: '',
-    };
-
-    if (imageGenerationModel.api_key || imageGenerationModel.base_url) {
-      setImageGenerationModel(sanitizedModel);
-      setClientBusinessSetting('tools.imageGenerationModel', sanitizedModel).catch((error) => {
-        console.error('Failed to sanitize image generation model config:', error);
-      });
-    }
-
-    void syncMcpServerEnv(sanitizedModel).catch((error) => {
-      console.error('Failed to sync image generation MCP env after provider change:', error);
-    });
-  }, [data, imageGenerationModel, syncMcpServerEnv]);
-
-  const handleImageGenerationModelChange = useCallback(
-    (value: Partial<ImageGenerationModelSetting>) => {
-      setImageGenerationModel((prev) => {
-        const newImageGenerationModel = {
-          ...prev,
-          id: value.id,
-          name: value.name,
-          platform: value.platform,
-          base_url: '',
-          api_key: '',
-          use_model: value.use_model,
-        } as ImageGenerationModelSetting;
-        setClientBusinessSetting('tools.imageGenerationModel', newImageGenerationModel).catch((error) => {
-          console.error('Failed to update image generation model config:', error);
-        });
-        // Sync env vars to the built-in MCP server
-        void syncMcpServerEnv(newImageGenerationModel).catch((error) => {
-          console.error('Failed to sync image generation MCP env:', error);
-          mcpMessage.error(error instanceof Error ? error.message : t('settings.mcpSyncError'));
-        });
-        return newImageGenerationModel;
-      });
-    },
-    [mcpMessage, syncMcpServerEnv, t]
-  );
-
-  const handleImageGenerationToggle = useCallback(
-    async (checked: boolean) => {
-      if (!builtinImageGenServer) return;
-
-      setIsUpdatingImageGeneration(true);
-      try {
-        if (checked) {
-          if (!imageGenerationModel?.id || !imageGenerationModel.use_model) {
-            mcpMessage.error(t('settings.mcpSyncError'));
-            return;
-          }
-          await syncMcpServerEnv(imageGenerationModel);
-        }
-        const updatedServer = await mcpService.toggleServer.invoke({ id: builtinImageGenServer.id });
-        await saveMcpServers((prevServers) =>
-          prevServers.map((server) => (server.id === updatedServer.id ? { ...server, ...updatedServer } : server))
-        );
-
-        if (updatedServer.enabled !== checked) {
-          mcpMessage.error(checked ? t('settings.mcpSyncError') : t('settings.mcpRemoveError'));
-          return;
-        }
-
-        setImageGenerationModel((prev) => {
-          if (!prev) return prev;
-          const next = { ...prev, switch: checked };
-          setClientBusinessSetting('tools.imageGenerationModel', next).catch((error) => {
-            console.error('Failed to sync image generation switch state:', error);
-          });
-          return next;
-        });
-      } catch (error) {
-        console.error('Failed to toggle image generation MCP server:', error);
-        mcpMessage.error(error instanceof Error ? error.message : t('settings.mcpSyncError'));
-      } finally {
-        setIsUpdatingImageGeneration(false);
-      }
-    },
-    [builtinImageGenServer, imageGenerationModel, mcpMessage, saveMcpServers, syncMcpServerEnv, t]
-  );
+  const { mcpServers, extensionMcpServers, saveMcpServers, setMcpServers } = useMcpServers();
 
   const viewMode = useSettingsViewMode();
   const isPageMode = viewMode === 'page';
-  const navigateToSettingsTab = useSettingsTabNavigate();
-  const isImageGenerationModelUnavailable = !imageGenerationModelList.length || !imageGenerationModel?.use_model;
 
   return (
     <div className='flex flex-col h-full w-full'>
@@ -509,111 +499,7 @@ const ToolsModalContent: React.FC = () => {
             </div>
           </div>
           {/* 图像生成 */}
-          <div className='px-[12px] md:px-[32px] py-[24px] bg-2 rd-12px md:rd-16px border border-border-2'>
-            <div className='flex items-center justify-between mb-16px'>
-              <span className='text-14px text-t-primary'>{t('settings.imageGeneration')}</span>
-              <Switch
-                disabled={
-                  isUpdatingImageGeneration ||
-                  isImageGenerationServerLoading ||
-                  !builtinImageGenServer ||
-                  (!builtinImageGenServer.enabled && isImageGenerationModelUnavailable)
-                }
-                checked={Boolean(builtinImageGenServer?.enabled) && !isImageGenerationServerLoading}
-                loading={isImageGenerationServerLoading}
-                onChange={handleImageGenerationToggle}
-              />
-            </div>
-
-            <Divider className='mt-0px mb-20px' />
-
-            <Form layout='horizontal' labelAlign='left' className='space-y-12px'>
-              <Form.Item
-                label={t('settings.imageGenerationModel')}
-                tooltip={
-                  <div className='space-y-4px'>
-                    <div>{t('settings.imageGenSupportedTooltipTitle')}</div>
-                    <ul className='list-disc ps-16px m-0'>
-                      <li>{t('settings.imageGenSupportedTooltipGemini')}</li>
-                      <li>{t('settings.imageGenSupportedTooltipOpenRouter')}</li>
-                      <li>{t('settings.imageGenSupportedTooltipAntigravity')}</li>
-                    </ul>
-                    <div>{t('settings.imageGenUnsupportedTooltip')}</div>
-                  </div>
-                }
-              >
-                {imageGenerationModelList.length > 0 ? (
-                  <AionSelect
-                    value={
-                      imageGenerationModel?.id && imageGenerationModel?.use_model
-                        ? `${imageGenerationModel.id}|${imageGenerationModel.use_model}`
-                        : undefined
-                    }
-                    onChange={(value) => {
-                      const [platformId, modelName] = value.split('|');
-                      const platform = imageGenerationModelList.find((p) => p.id === platformId);
-                      if (platform) {
-                        handleImageGenerationModelChange({
-                          ...platform,
-                          use_model: modelName,
-                        });
-                      }
-                    }}
-                  >
-                    {imageGenerationModelList.map(({ models, ...platform }) => (
-                      <AionSelect.OptGroup label={platform.name} key={platform.id}>
-                        {models.map((modelName) => (
-                          <AionSelect.Option key={platform.id + modelName} value={platform.id + '|' + modelName}>
-                            {modelName}
-                          </AionSelect.Option>
-                        ))}
-                      </AionSelect.OptGroup>
-                    ))}
-                  </AionSelect>
-                ) : (
-                  <div className='text-t-secondary flex items-center'>
-                    {t('settings.noAvailable')}
-                    {navigateToSettingsTab ? (
-                      <a
-                        className='text-inherit underline underline-offset-2 cursor-pointer'
-                        onClick={() => navigateToSettingsTab('model')}
-                      >
-                        {t('settings.goToModelSettings')}
-                      </a>
-                    ) : (
-                      t('settings.goToModelSettings')
-                    )}
-                    <Tooltip
-                      content={
-                        <div>
-                          {t('settings.needHelpTooltip')}
-                          <a
-                            href='https://github.com/iOfficeAI/AionUi/wiki/AionUi-Image-Generation-Tool-Model-Configuration-Guide'
-                            target='_blank'
-                            rel='noopener noreferrer'
-                            className='text-[rgb(var(--primary-6))] hover:text-[rgb(var(--primary-5))] underline ms-4px'
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {t('settings.configGuide')}
-                          </a>
-                        </div>
-                      }
-                    >
-                      <a
-                        href='https://github.com/iOfficeAI/AionUi/wiki/AionUi-Image-Generation-Tool-Model-Configuration-Guide'
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='ms-8px text-[rgb(var(--primary-6))] hover:text-[rgb(var(--primary-5))] cursor-pointer'
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Help theme='outline' size='14' />
-                      </a>
-                    </Tooltip>
-                  </div>
-                )}
-              </Form.Item>
-            </Form>
-          </div>
+          <ImageGenerationSection message={mcpMessage} />
         </div>
       </AionScrollArea>
     </div>

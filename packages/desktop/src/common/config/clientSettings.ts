@@ -5,9 +5,30 @@ export type GoogleClientSetting = {
   proxy?: string;
 };
 
+/**
+ * The per-user image generation preference (`tools.imageGenerationModel`). Superseded by the server-wide
+ * {@link ImageGenerationSettings}; kept only for the legacy migrations that still read the old value.
+ */
 export type ImageGenerationModelSetting = TProviderWithModel & {
   switch?: boolean;
 };
+
+/**
+ * The image generation model, one setting for the whole server (`/api/settings/image-generation`).
+ * The super admin chooses it and the backend adds the image generation MCP server to every session.
+ */
+export type ImageGenerationSettings = {
+  /** Provider that serves the image model, or null while none is chosen. */
+  provider_id: string | null;
+  /** Image model of that provider, or null while none is chosen. */
+  model: string | null;
+  /** Whether sessions get the image generation tool. Needs a model. */
+  enabled: boolean;
+  /** Whether this server has the image generation MCP script installed; read-only. */
+  supported: boolean;
+};
+
+export type ImageGenerationSettingsUpdate = Omit<ImageGenerationSettings, 'supported'>;
 
 export type ClientBusinessSettingMap = {
   'google.config': GoogleClientSetting;

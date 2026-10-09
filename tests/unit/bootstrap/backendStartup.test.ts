@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { startBackendOrExit } from '@/process/startup/backendStartup';
+import { exposeImageGenMcpScript, startBackendOrExit } from '@/process/startup/backendStartup';
 
 describe('startBackendOrExit', () => {
   it('registers the backend port when startup succeeds', async () => {
@@ -107,5 +107,36 @@ describe('startBackendOrExit', () => {
     expect(captureFailure).not.toHaveBeenCalled();
     expect(exitApp).not.toHaveBeenCalled();
     expect(onStarted).not.toHaveBeenCalled();
+  });
+});
+
+describe('exposeImageGenMcpScript', () => {
+  // aioncore reads this variable at spawn time and uses it to add the image generation MCP server to every
+  // session once the administrator switches the shared image setting on. Without it the server has nothing to run.
+  it('points aioncore at the bundled image generation script', () => {
+    const env: NodeJS.ProcessEnv = {};
+    const resolveScriptPath = vi.fn(() => '/app/out/main/builtin-mcp-image-gen.js');
+
+    exposeImageGenMcpScript(env, resolveScriptPath);
+
+    expect(env.AIONUI_IMAGE_GEN_MCP_SCRIPT).toBe('/app/out/main/builtin-mcp-image-gen.js');
+  });
+
+  it('keeps a script path the operator already set', () => {
+    const env: NodeJS.ProcessEnv = { AIONUI_IMAGE_GEN_MCP_SCRIPT: '/opt/custom/image-gen.js' };
+    const resolveScriptPath = vi.fn(() => '/app/out/main/builtin-mcp-image-gen.js');
+
+    exposeImageGenMcpScript(env, resolveScriptPath);
+
+    expect(env.AIONUI_IMAGE_GEN_MCP_SCRIPT).toBe('/opt/custom/image-gen.js');
+    expect(resolveScriptPath).not.toHaveBeenCalled();
+  });
+
+  it('treats an empty value as not set', () => {
+    const env: NodeJS.ProcessEnv = { AIONUI_IMAGE_GEN_MCP_SCRIPT: '' };
+
+    exposeImageGenMcpScript(env, () => '/app/out/main/builtin-mcp-image-gen.js');
+
+    expect(env.AIONUI_IMAGE_GEN_MCP_SCRIPT).toBe('/app/out/main/builtin-mcp-image-gen.js');
   });
 });

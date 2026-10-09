@@ -21,7 +21,8 @@ vi.mock('@/common/adapter/ipcBridge', () => ({
   mcpService: mcpServiceMock,
 }));
 
-import { ensureBackendMcpCatalog } from '@/renderer/hooks/mcp/catalog';
+import { ensureBackendMcpCatalog, isBuiltinImageGenServer } from '@/renderer/hooks/mcp/catalog';
+import { BUILTIN_IMAGE_GEN_ID, BUILTIN_IMAGE_GEN_NAME } from '@/common/config/storage';
 
 describe('ensureBackendMcpCatalog', () => {
   beforeEach(() => {
@@ -82,5 +83,24 @@ describe('ensureBackendMcpCatalog', () => {
     expect(result.userServers).toEqual([]);
     expect(result.builtinServers).toEqual([]);
     expect(result.allServers).toEqual([]);
+  });
+});
+
+describe('isBuiltinImageGenServer', () => {
+  it('recognises the built-in row by its stable id', () => {
+    expect(isBuiltinImageGenServer({ id: BUILTIN_IMAGE_GEN_ID, name: 'whatever', builtin: true })).toBe(true);
+  });
+
+  it('recognises the built-in row by its name', () => {
+    expect(isBuiltinImageGenServer({ id: 'row-1', name: BUILTIN_IMAGE_GEN_NAME, builtin: true })).toBe(true);
+  });
+
+  it('leaves other built-in rows alone', () => {
+    expect(isBuiltinImageGenServer({ id: 'builtin-browser', name: 'aionui-browser', builtin: true })).toBe(false);
+  });
+
+  it('leaves a server the user made themselves alone, even with the same name', () => {
+    expect(isBuiltinImageGenServer({ id: 'row-1', name: BUILTIN_IMAGE_GEN_NAME, builtin: false })).toBe(false);
+    expect(isBuiltinImageGenServer({ id: BUILTIN_IMAGE_GEN_ID, name: 'x' })).toBe(false);
   });
 });

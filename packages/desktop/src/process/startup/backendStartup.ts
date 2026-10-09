@@ -15,6 +15,19 @@ type StartBackendOrExitOptions = {
   logError?: (message: string, error: unknown) => void;
 };
 
+/**
+ * Tell aioncore where the bundled image generation MCP script is.
+ *
+ * The image model is a server-wide setting and aioncore adds the MCP server to every session itself once it is
+ * switched on; the script path comes from AIONUI_IMAGE_GEN_MCP_SCRIPT, and only a script that exists counts as
+ * installed. The web host spawns aioncore with a copy of process.env taken at that moment, so this has to run
+ * before the backend is started. A path the operator already set wins.
+ */
+export function exposeImageGenMcpScript(env: NodeJS.ProcessEnv, resolveScriptPath: () => string): void {
+  if (env.AIONUI_IMAGE_GEN_MCP_SCRIPT) return;
+  env.AIONUI_IMAGE_GEN_MCP_SCRIPT = resolveScriptPath();
+}
+
 function isBackendStartupCancelledError(error: unknown): boolean {
   return error instanceof Error && error.name === 'BackendStartupCancelledError';
 }

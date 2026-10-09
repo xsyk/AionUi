@@ -23,12 +23,12 @@ import * as path from 'path';
 import { initMainAdapterWithWindow } from './common/adapter/main';
 import { ipcBridge } from './common';
 import { initializeProcess } from './process';
-import { startBackendOrExit } from './process/startup/backendStartup';
+import { exposeImageGenMcpScript, startBackendOrExit } from './process/startup/backendStartup';
 import { assertStartupArchitectureCompatible } from './process/startup/architectureCompatibility';
 import { classifyBackendStartupFailure } from './process/startup/backendStartupFailure';
 import { installQuitCleanup } from './process/startup/quitCleanup';
 import { shouldRegisterBackendStartup } from './process/startup/singleInstanceGating';
-import { ProcessConfig } from './process/utils/initStorage';
+import { getBuiltinMcpScriptPath, ProcessConfig } from './process/utils/initStorage';
 import type { BackendStartupFailureInfo } from './common/types/platform/electron';
 import { registerWindowMaximizeListeners } from '@process/bridge';
 import { BackendLifecycleManager } from '@aionui/web-host';
@@ -806,6 +806,21 @@ const handleAppReady = async (): Promise<void> => {
       console.error('[CDP] Failed to start single-target bridge; agent browser control stays off.', error);
     }
   }
+
+  /**
+   * 告诉 aioncore 内置图像生成 MCP 脚本在哪里。
+   *
+   * 图像模型是全服务器共用的设置：管理员开启后，aioncore 在每个会话启动时自己把这个 MCP 加进去，
+   * 脚本路径就靠这个环境变量。和上面的 CDP 变量一样，必须在 startBackendOrExit()（以及之后的
+   * 数据库恢复重启）之前设置：backend-launcher 用 spawn 那一刻的 process.env 起 aioncore。
+   *
+   * Tell aioncore where the built-in image generation MCP script is. The image model is a server-wide
+   * setting; once the admin switches it on, aioncore adds this MCP to every session itself and finds the
+   * script through this variable. Like the CDP values above it has to be set before the backend is spawned
+   * (both the normal start and the corrupted-database restart), because the spawn takes a snapshot of
+   * process.env. A value the operator already set is kept.
+   */
+  exposeImageGenMcpScript(process.env, () => getBuiltinMcpScriptPath('builtin-mcp-image-gen'));
 
   const debugBackendStartupFailure = resolveDebugBackendStartupFailure();
   if (debugBackendStartupFailure) {

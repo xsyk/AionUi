@@ -1,5 +1,11 @@
 import { mcpService } from '@/common/adapter/ipcBridge';
-import type { IMcpServer, IMcpServerTransport, ISessionMcpServer } from '@/common/config/storage';
+import {
+  BUILTIN_IMAGE_GEN_ID,
+  BUILTIN_IMAGE_GEN_NAME,
+  type IMcpServer,
+  type IMcpServerTransport,
+  type ISessionMcpServer,
+} from '@/common/config/storage';
 import { getClientBusinessSetting } from '@/renderer/services/clientBusinessSettings';
 
 type BackendMcpTransport = Exclude<IMcpServerTransport, { type: 'streamable_http' }>;
@@ -13,6 +19,14 @@ type BackendMcpPayload = {
 };
 
 const isBuiltinServer = (server: IMcpServer) => server.builtin === true;
+
+/**
+ * The built-in image generation row. It is not an MCP server the user manages: the image model is a
+ * server-wide setting and the backend adds the tool to every session itself, so this per-user row (the
+ * desktop still creates it) stays out of the MCP list and out of what a new conversation sends.
+ */
+export const isBuiltinImageGenServer = (server: Pick<IMcpServer, 'id' | 'name' | 'builtin'>): boolean =>
+  server.builtin === true && (server.id === BUILTIN_IMAGE_GEN_ID || server.name === BUILTIN_IMAGE_GEN_NAME);
 
 const normalizeServerName = (name: string) => name.trim().toLowerCase();
 

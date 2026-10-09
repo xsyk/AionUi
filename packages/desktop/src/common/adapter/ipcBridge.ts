@@ -14,6 +14,7 @@
 
 import type { IConfirmation } from '@/common/chat/chatLib';
 import type { AcpSlashCommandApiItem } from '@/common/chat/slash/types';
+import type { ImageGenerationSettings, ImageGenerationSettingsUpdate } from '@/common/config/clientSettings';
 import { bridge } from '@/common/platform/bridge';
 import { buildListTasksPath } from './teamTaskPath';
 import type { OpenDialogOptions } from 'electron';
@@ -1270,6 +1271,19 @@ export const mcpService = {
   loginMcpOAuth: httpPost<{ success: boolean; error?: string }, { server_url: string }>('/api/mcp/oauth/login'),
   logoutMcpOAuth: httpPost<void, { server_url: string }>('/api/mcp/oauth/logout'),
   getAuthenticatedServers: httpGet<string[], void>('/api/mcp/oauth/authenticated'),
+};
+
+// ---------------------------------------------------------------------------
+// Image generation — routed to /api/settings/image-generation
+//
+// One server-wide setting rather than a per-user preference: everyone can read
+// it, only the super admin can write it (others get 403 FORBIDDEN), and the
+// backend adds the image generation MCP server to every session itself.
+// ---------------------------------------------------------------------------
+
+export const imageGeneration = {
+  get: httpGet<ImageGenerationSettings, void>('/api/settings/image-generation'),
+  update: httpPut<ImageGenerationSettings, ImageGenerationSettingsUpdate>('/api/settings/image-generation'),
 };
 
 export const openclawConversation = {

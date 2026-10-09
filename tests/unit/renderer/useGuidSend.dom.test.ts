@@ -6,7 +6,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IMcpServer } from '@/common/config/storage';
+import { BUILTIN_IMAGE_GEN_ID, BUILTIN_IMAGE_GEN_NAME, type IMcpServer } from '@/common/config/storage';
 import { useGuidSend, type GuidSendDeps } from '@/renderer/pages/guid/hooks/useGuidSend';
 
 const createConversationInvokeMock = vi.fn();
@@ -152,6 +152,121 @@ describe('useGuidSend', () => {
     expect(payload.assistant?.conversation_overrides?.mcp_ids).toEqual(['mcp-user', 'builtin-mcp']);
     expect(payload.extra.selected_mcp_server_ids).toEqual(['mcp-user']);
     expect(payload.extra.selected_session_mcp_servers).toEqual([expect.objectContaining({ id: 'builtin-mcp' })]);
+  });
+
+  describe('built-in image generation MCP row', () => {
+    // The image generation tool is a server-wide setting and the backend adds it to every session itself. The
+    // desktop still keeps a per-user "built-in" row for it, with credentials from the old per-user preference;
+    // sending that row would put stale credentials next to (or instead of) the shared definition.
+    const imageGenRow = {
+      id: BUILTIN_IMAGE_GEN_ID,
+      name: BUILTIN_IMAGE_GEN_NAME,
+      enabled: true,
+      builtin: true,
+      transport: { type: 'stdio', command: 'node', args: ['/app/builtin-mcp-image-gen.js'] },
+    } as IMcpServer;
+    const otherBuiltinRow = {
+      id: 'builtin-browser',
+      name: 'aionui-browser',
+      enabled: true,
+      builtin: true,
+      transport: { type: 'stdio', command: 'node', args: ['/app/builtin-mcp-browser.js'] },
+    } as IMcpServer;
+    const userRow = {
+      id: 'mcp-user',
+      name: 'User MCP',
+      enabled: true,
+      builtin: false,
+      transport: { type: 'stdio', command: 'user-mcp', args: [] },
+    } as IMcpServer;
+
+    it('does not send the row with the ACP session MCP servers the user ticked', async () => {
+      const deps = createDeps();
+      deps.availableMcpServers = [userRow, imageGenRow, otherBuiltinRow];
+      deps.selectedMcpServerIds = [userRow.id, imageGenRow.id, otherBuiltinRow.id];
+
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      const payload = createConversationInvokeMock.mock.calls[0][0];
+      expect(payload.extra.selected_session_mcp_servers).toEqual([
+        expect.objectContaining({ id: 'builtin-browser', name: 'aionui-browser' }),
+      ]);
+      expect(payload.extra.selected_mcp_server_ids).toEqual(['mcp-user']);
+    });
+
+    it('does not send the row with the Aion CLI session MCP servers the user ticked', async () => {
+      const deps = createDeps();
+      deps.selectedAssistantId = 'bare:aionrs';
+      deps.selectedAssistantBackend = 'aionrs';
+      deps.current_model = { id: 'p1', use_model: 'm1' } as never;
+      deps.availableMcpServers = [userRow, imageGenRow, otherBuiltinRow];
+      deps.selectedMcpServerIds = [userRow.id, imageGenRow.id, otherBuiltinRow.id];
+
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      const payload = createConversationInvokeMock.mock.calls[0][0];
+      expect(payload.extra.selected_session_mcp_servers).toEqual([
+        expect.objectContaining({ id: 'mcp-user' }),
+        expect.objectContaining({ id: 'builtin-browser' }),
+      ]);
+    });
+
+    it('does not send the row when the assistant defaults select it', async () => {
+      const deps = createDeps();
+      deps.availableMcpServers = [userRow, imageGenRow, otherBuiltinRow];
+      deps.selectedMcpServerIds = undefined;
+      deps.assistantDefaultMcpIds = [userRow.id, imageGenRow.id, otherBuiltinRow.id];
+
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      const payload = createConversationInvokeMock.mock.calls[0][0];
+      expect(payload.extra.selected_session_mcp_servers).toEqual([
+        expect.objectContaining({ id: 'mcp-user' }),
+        expect.objectContaining({ id: 'builtin-browser' }),
+      ]);
+    });
+
+    it('recognises the row by its name as well as its id', async () => {
+      const deps = createDeps();
+      deps.availableMcpServers = [{ ...imageGenRow, id: 'row-from-another-install' } as IMcpServer];
+      deps.selectedMcpServerIds = ['row-from-another-install'];
+
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      const payload = createConversationInvokeMock.mock.calls[0][0];
+      expect(payload.extra.selected_session_mcp_servers).toEqual([]);
+    });
+
+    it('still sends a server of the user that merely shares the name', async () => {
+      // Only the built-in row is the server-managed one; a server the user made themselves is theirs to send.
+      const deps = createDeps();
+      deps.selectedAssistantId = 'bare:aionrs';
+      deps.selectedAssistantBackend = 'aionrs';
+      deps.current_model = { id: 'p1', use_model: 'm1' } as never;
+      const lookalike = { ...userRow, id: 'mcp-lookalike', name: BUILTIN_IMAGE_GEN_NAME } as IMcpServer;
+      deps.availableMcpServers = [lookalike];
+      deps.selectedMcpServerIds = [lookalike.id];
+
+      const { result } = renderHook(() => useGuidSend(deps));
+      await act(async () => {
+        await result.current.handleSend();
+      });
+
+      const payload = createConversationInvokeMock.mock.calls[0][0];
+      expect(payload.extra.selected_session_mcp_servers).toEqual([expect.objectContaining({ id: 'mcp-lookalike' })]);
+    });
   });
 
   it('does not write legacy preset_assistant_id for preset assistant sends', async () => {
