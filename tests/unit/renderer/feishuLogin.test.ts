@@ -5,7 +5,12 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { feishuErrorKey, feishuStartUrl, fetchFeishuLoginStatus } from '@/renderer/pages/login/feishuLogin';
+import {
+  feishuErrorKey,
+  feishuStartUrl,
+  fetchFeishuLoginStatus,
+  startFeishuLogin,
+} from '@/renderer/pages/login/feishuLogin';
 
 describe('feishuLogin helpers', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -90,5 +95,14 @@ describe('feishuLogin helpers', () => {
       'https://a.example.com/api/auth/feishu/start'
     );
     expect(feishuStartUrl('not a url', 'https://a.example.com')).toBe('/api/auth/feishu/start');
+  });
+
+  it('leaves for the Feishu start URL of this site or of the configured site', () => {
+    const assign = vi.fn();
+    startFeishuLogin({ enabled: true, publicBaseUrl: 'https://a.example.com' }, assign, 'https://a.example.com');
+    expect(assign).toHaveBeenLastCalledWith('/api/auth/feishu/start');
+    startFeishuLogin({ enabled: true, publicBaseUrl: 'https://a.example.com/' }, assign, 'http://192.168.0.210:25808');
+    expect(assign).toHaveBeenLastCalledWith('https://a.example.com/api/auth/feishu/start');
+    expect(assign).toHaveBeenCalledTimes(2);
   });
 });

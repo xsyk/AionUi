@@ -16,12 +16,14 @@ import styles from './LoginPage.module.css';
 
 type FeishuPanelProps = {
   notice: LoginNotice | null;
+  /** Focus the Feishu button when the view appears. */
+  autoFocus?: boolean;
   onStart: () => void;
   onUsePassword: () => void;
 };
 
 /** First view when Feishu sign-in is enabled. */
-const FeishuPanel: React.FC<FeishuPanelProps> = ({ notice, onStart, onUsePassword }) => {
+const FeishuPanel: React.FC<FeishuPanelProps> = ({ notice, autoFocus = false, onStart, onUsePassword }) => {
   const { t } = useTranslation();
 
   return (
@@ -29,6 +31,7 @@ const FeishuPanel: React.FC<FeishuPanelProps> = ({ notice, onStart, onUsePasswor
       <Button
         long
         type='primary'
+        autoFocus={autoFocus}
         className={classNames(styles.primaryButton, styles.feishuButton)}
         data-testid='feishu-login-button'
         onClick={onStart}

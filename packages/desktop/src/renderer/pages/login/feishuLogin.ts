@@ -66,7 +66,14 @@ export function feishuErrorKey(code: string | null): string | null {
   return KNOWN_ERRORS.has(code) ? `login.feishu.errors.${code}` : 'login.feishu.errors.unknown';
 }
 
-/** Leaves the app for the Feishu authorization page (full-page navigation). */
-export function startFeishuLogin(status: FeishuLoginStatus): void {
-  window.location.assign(feishuStartUrl(status.publicBaseUrl, window.location.origin));
+/**
+ * Leaves the app for the Feishu authorization page (full-page navigation).
+ * `assign` and `origin` default to the current window; tests pass their own.
+ */
+export function startFeishuLogin(
+  status: FeishuLoginStatus,
+  assign: (url: string) => void = (url) => window.location.assign(url),
+  origin: string = window.location.origin
+): void {
+  assign(feishuStartUrl(status.publicBaseUrl, origin));
 }

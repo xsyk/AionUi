@@ -7,7 +7,7 @@
 import { Button, Checkbox, Input } from '@arco-design/web-react';
 import { ArrowLeft, Lock, PreviewCloseOne, PreviewOpen, User } from '@icon-park/react';
 import classNames from 'classnames';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/context/AuthContext';
@@ -35,6 +35,18 @@ const PasswordPanel: React.FC<PasswordPanelProps> = ({ notice, onNotice, onBackT
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  // A sign-in request can outlive this form (the router leaves /login once the session is live);
+  // its answer must not then land on whatever replaced the form.
+  const mounted = useRef(true);
+  const navigateTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      window.clearTimeout(navigateTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     const remembered = readRememberedCredentials();
@@ -59,35 +71,41 @@ const PasswordPanel: React.FC<PasswordPanelProps> = ({ notice, onNotice, onBackT
 
       const result = await login({ username: trimmedUsername, password, remember: rememberMe });
 
+      // Saved even when the form is gone by now: the sign-in itself went through.
       if (result.success) {
         if (rememberMe) {
           rememberCredentials({ username: trimmedUsername, password });
         } else {
           forgetCredentials();
         }
+      }
+      if (!mounted.current) return;
+
+      if (result.success) {
         onNotice({ type: 'success', text: t('login.success') });
-        window.setTimeout(() => {
+        // The form stays disabled until the page moves on.
+        navigateTimer.current = window.setTimeout(() => {
           void navigate('/guid', { replace: true });
         }, 600);
-      } else {
-        const errorText = (() => {
-          switch (result.code) {
-            case 'invalidCredentials':
-              return t('login.errors.invalidCredentials');
-            case 'tooManyAttempts':
-              return t('login.errors.tooManyAttempts');
-            case 'networkError':
-              return t('login.errors.networkError');
-            case 'serverError':
-              return t('login.errors.serverError');
-            case 'unknown':
-            default:
-              return result.message ?? t('login.errors.unknown');
-          }
-        })();
-        onNotice({ type: 'error', text: errorText }, true);
+        return;
       }
 
+      const errorText = (() => {
+        switch (result.code) {
+          case 'invalidCredentials':
+            return t('login.errors.invalidCredentials');
+          case 'tooManyAttempts':
+            return t('login.errors.tooManyAttempts');
+          case 'networkError':
+            return t('login.errors.networkError');
+          case 'serverError':
+            return t('login.errors.serverError');
+          case 'unknown':
+          default:
+            return result.message ?? t('login.errors.unknown');
+        }
+      })();
+      onNotice({ type: 'error', text: errorText }, true);
       setLoading(false);
     },
     [login, navigate, onNotice, password, rememberMe, t, username]
@@ -148,7 +166,13 @@ const PasswordPanel: React.FC<PasswordPanelProps> = ({ notice, onNotice, onBackT
       <LoginMessage notice={notice} />
       {onBackToFeishu && (
         <div className={styles.footer}>
-          <Button type='text' className={styles.switchLink} data-testid='back-to-feishu' onClick={onBackToFeishu}>
+          <Button
+            type='text'
+            disabled={loading}
+            className={styles.switchLink}
+            data-testid='back-to-feishu'
+            onClick={onBackToFeishu}
+          >
             <ArrowLeft className='rtl-mirror' size='1em' fill='currentColor' />
             <span>{t('login.feishu.back')}</span>
           </Button>

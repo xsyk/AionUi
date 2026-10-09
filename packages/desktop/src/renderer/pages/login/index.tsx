@@ -23,6 +23,9 @@ type LoginView = 'feishu' | 'password' | 'redirecting';
 /** How long a failed username/password attempt stays on screen. */
 const AUTO_CLEAR_NOTICE_MS = 5000;
 
+/** Give the Feishu view back if the browser still hasn't left by then (navigation cancelled). */
+const REDIRECT_FALLBACK_MS = 15000;
+
 const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -32,6 +35,9 @@ const LoginPage: React.FC = () => {
   const [feishu, setFeishu] = useState<FeishuLoginStatus | null>(null);
   const [view, setView] = useState<LoginView>('password');
   const [notice, setNotice] = useState<LoginNotice | null>(null);
+  // Set once the user comes back from the password form, so focus lands on the Feishu button
+  // instead of dropping to the page; the first visit leaves focus alone.
+  const [returnedFromPassword, setReturnedFromPassword] = useState(false);
   const noticeTimer = useRef<number | undefined>(undefined);
 
   const showNotice = useCallback((next: LoginNotice | null, autoClear = false) => {
@@ -91,6 +97,13 @@ const LoginPage: React.FC = () => {
     if (view === 'redirecting' && feishu?.enabled) startFeishuLogin(feishu);
   }, [feishu, view]);
 
+  // Esc or Stop cancels the navigation and leaves this page as it was; don't spin forever.
+  useEffect(() => {
+    if (view !== 'redirecting') return undefined;
+    const timer = window.setTimeout(() => setView('feishu'), REDIRECT_FALLBACK_MS);
+    return () => window.clearTimeout(timer);
+  }, [view]);
+
   const switchView = useCallback(
     (next: LoginView) => {
       showNotice(null);
@@ -113,9 +126,10 @@ const LoginPage: React.FC = () => {
 
   if (view === 'feishu') {
     return (
-      <LoginCard title={t('login.brand')} subtitle={t('login.subtitle', { appName: APP_NAME })}>
+      <LoginCard brand title={t('login.brand')} subtitle={t('login.subtitle', { appName: APP_NAME })}>
         <FeishuPanel
           notice={notice}
+          autoFocus={returnedFromPassword}
           onStart={() => switchView('redirecting')}
           onUsePassword={() => switchView('password')}
         />
@@ -128,7 +142,14 @@ const LoginPage: React.FC = () => {
       <PasswordPanel
         notice={notice}
         onNotice={showNotice}
-        onBackToFeishu={feishu.enabled ? () => switchView('feishu') : undefined}
+        onBackToFeishu={
+          feishu.enabled
+            ? () => {
+                setReturnedFromPassword(true);
+                switchView('feishu');
+              }
+            : undefined
+        }
       />
     </LoginCard>
   );

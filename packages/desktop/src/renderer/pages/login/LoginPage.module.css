@@ -135,8 +135,8 @@
   color: var(--login-accent);
 }
 
-/* The brand name is the only title with a subtitle; the design sets it larger than the view titles. */
-.title:has(+ .subtitle) {
+/* The brand name on the Feishu view; the design sets it larger than the view titles. */
+.brandTitle {
   margin-top: 14px;
   font-size: 40px;
   line-height: 48px;
@@ -175,14 +175,15 @@
   transform: translateY(-1px);
 }
 
-/* Long translations wrap inside the button instead of running out of it. */
+/* Long translations wrap inside the button, which grows instead of letting them spill out. */
 .feishuButton:global(.arco-btn) {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
-  height: 68px;
-  padding-inline: 20px;
+  height: auto;
+  min-height: 68px;
+  padding: 8px 20px;
   font-size: 24px;
   line-height: 30px;
   white-space: normal;
@@ -236,6 +237,10 @@
   background: var(--login-accent-soft);
 }
 
+.card .switchLink:global(.arco-btn):disabled {
+  opacity: 0.5;
+}
+
 /* The design draws the link arrows larger and bolder than the text-sized default. */
 .switchLink :global(.i-icon) {
   font-size: 24px;
@@ -265,7 +270,6 @@
   padding-inline: 14px 12px;
   border: 1px solid var(--border-base);
   border-radius: 10px;
-  background: var(--bg-base);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -464,7 +468,7 @@
     line-height: 36px;
   }
 
-  .title:has(+ .subtitle) {
+  .brandTitle {
     font-size: 34px;
     line-height: 42px;
   }

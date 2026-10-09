@@ -14,11 +14,13 @@ import styles from './LoginPage.module.css';
 type LoginCardProps = {
   title: string;
   subtitle?: string;
+  /** Set the title as the large brand heading (the Feishu view). */
+  brand?: boolean;
   children: React.ReactNode;
 };
 
 /** Backdrop and card shared by every login view: language picker, logo and heading. */
-const LoginCard: React.FC<LoginCardProps> = ({ title, subtitle, children }) => {
+const LoginCard: React.FC<LoginCardProps> = ({ title, subtitle, brand = false, children }) => {
   const { t } = useTranslation();
 
   return (
@@ -34,7 +36,7 @@ const LoginCard: React.FC<LoginCardProps> = ({ title, subtitle, children }) => {
           </div>
           <header className={styles.header}>
             <img className={styles.logo} src={loginLogo} alt={t('login.brand')} />
-            <h1 className={styles.title}>{title}</h1>
+            <h1 className={classNames(styles.title, brand && styles.brandTitle)}>{title}</h1>
             {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
           </header>
           {children}
