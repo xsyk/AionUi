@@ -43,7 +43,7 @@ const FeishuPanel: React.FC<FeishuPanelProps> = ({ notice, onStart, onUsePasswor
       <div className={styles.footer}>
         <Button type='text' className={styles.switchLink} data-testid='use-password-login' onClick={onUsePassword}>
           <span>{t('login.feishu.usePassword')}</span>
-          <Right className='rtl-mirror' />
+          <Right className='rtl-mirror' size='1em' fill='currentColor' />
         </Button>
       </div>
     </div>

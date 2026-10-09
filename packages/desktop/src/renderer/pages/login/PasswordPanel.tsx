@@ -100,7 +100,7 @@ const PasswordPanel: React.FC<PasswordPanelProps> = ({ notice, onNotice, onBackT
         className={styles.field}
         name='username'
         autoComplete='username'
-        prefix={<User />}
+        prefix={<User size='1em' fill='currentColor' />}
         placeholder={t('login.username')}
         aria-label={t('login.username')}
         value={username}
@@ -111,12 +111,18 @@ const PasswordPanel: React.FC<PasswordPanelProps> = ({ notice, onNotice, onBackT
         name='password'
         type={passwordVisible ? 'text' : 'password'}
         autoComplete='current-password'
-        prefix={<Lock />}
+        prefix={<Lock size='1em' fill='currentColor' />}
         suffix={
           <Button
             type='text'
             className={styles.visibilityToggle}
-            icon={passwordVisible ? <PreviewOpen /> : <PreviewCloseOne />}
+            icon={
+              passwordVisible ? (
+                <PreviewOpen size='1em' fill='currentColor' />
+              ) : (
+                <PreviewCloseOne size='1em' fill='currentColor' />
+              )
+            }
             aria-label={passwordVisible ? t('login.hidePassword') : t('login.showPassword')}
             onClick={() => setPasswordVisible((prev) => !prev)}
           />
@@ -143,7 +149,7 @@ const PasswordPanel: React.FC<PasswordPanelProps> = ({ notice, onNotice, onBackT
       {onBackToFeishu && (
         <div className={styles.footer}>
           <Button type='text' className={styles.switchLink} data-testid='back-to-feishu' onClick={onBackToFeishu}>
-            <ArrowLeft className='rtl-mirror' />
+            <ArrowLeft className='rtl-mirror' size='1em' fill='currentColor' />
             <span>{t('login.feishu.back')}</span>
           </Button>
         </div>

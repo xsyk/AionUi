@@ -22,7 +22,7 @@ const RedirectingPanel: React.FC = () => {
       </svg>
       <p className={styles.hint}>{t('login.feishu.redirectingHint')}</p>
       <div className={styles.privacyNote}>
-        <Protect theme='filled' size={26} className={styles.privacyIcon} />
+        <Protect theme='filled' size='1em' fill='currentColor' className={styles.privacyIcon} />
         <span>{t('login.feishu.privacyNote', { appName: APP_NAME })}</span>
       </div>
     </div>
