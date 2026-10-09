@@ -53,13 +53,41 @@ export class OpenAIRotatingClient extends RotatingApiClient<OpenAI> {
     });
   }
 
+  /**
+   * Generates image(s) with the OpenAI Images API (`POST /images/generations`), with the same key rotation and
+   * retries as {@link createChatCompletion}. Non-streaming only: the response is returned as `ImagesResponse`.
+   */
+  async generateImage(
+    params: OpenAI.Images.ImageGenerateParams,
+    options?: OpenAI.RequestOptions
+  ): Promise<OpenAI.Images.ImagesResponse> {
+    return await this.executeWithRetry(async (client) => {
+      const result = await client.images.generate(params, options);
+      return result as OpenAI.Images.ImagesResponse;
+    });
+  }
+
+  /**
+   * Edits image(s) with the OpenAI Images API (`POST /images/edits`), with the same key rotation and retries as
+   * {@link createChatCompletion}. Non-streaming only. Pass files that can be read again (e.g. from `toFile`), as a
+   * retry sends the request body once more.
+   */
+  async editImage(
+    params: OpenAI.Images.ImageEditParams,
+    options?: OpenAI.RequestOptions
+  ): Promise<OpenAI.Images.ImagesResponse> {
+    return await this.executeWithRetry(async (client) => {
+      const result = await client.images.edit(params, options);
+      return result as OpenAI.Images.ImagesResponse;
+    });
+  }
+
+  /** Same as {@link generateImage}; kept for existing callers. */
   async createImage(
     params: OpenAI.Images.ImageGenerateParams,
     options?: OpenAI.RequestOptions
   ): Promise<OpenAI.Images.ImagesResponse> {
-    return await this.executeWithRetry((client) => {
-      return client.images.generate(params, options) as Promise<OpenAI.Images.ImagesResponse>;
-    });
+    return await this.generateImage(params, options);
   }
 
   async createEmbedding(

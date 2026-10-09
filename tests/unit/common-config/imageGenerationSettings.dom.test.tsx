@@ -28,7 +28,7 @@ const GEMINI_PROVIDER = {
   api_key: '',
   models: ['gemini-2.5-pro', 'gemini-2.5-flash-image', 'gemini-3-pro-image-preview'],
 };
-// The generation tool cannot talk to a plain OpenAI endpoint, so this provider never shows up in the list.
+// The generation tool talks to OpenAI's Images API, so this provider's image model is offered.
 const OPENAI_PROVIDER = {
   id: 'p-openai',
   name: 'OpenAI',
@@ -36,6 +36,15 @@ const OPENAI_PROVIDER = {
   base_url: 'https://api.openai.com/v1',
   api_key: '',
   models: ['gpt-image-1'],
+};
+// Neither an OpenAI-protocol provider nor one of the chat-style image providers: nothing it hosts is offered.
+const ANTHROPIC_PROVIDER = {
+  id: 'p-anthropic',
+  name: 'Anthropic',
+  platform: 'anthropic',
+  base_url: '',
+  api_key: '',
+  models: ['claude-sonnet-4', 'gpt-image-1'],
 };
 
 const SAVED_SETTINGS = {
@@ -248,7 +257,7 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
   beforeEach(() => {
     mocks.authUser = ADMIN_USER;
     mocks.isDesktop = false;
-    mocks.providers = [GEMINI_PROVIDER, OPENAI_PROVIDER];
+    mocks.providers = [GEMINI_PROVIDER, OPENAI_PROVIDER, ANTHROPIC_PROVIDER];
     mocks.getSettings.mockReset().mockResolvedValue(SAVED_SETTINGS);
     mocks.updateSettings.mockReset().mockImplementation(async (body: object) => ({ ...body, supported: true }));
     mocks.updateServer.mockReset();
@@ -312,7 +321,11 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
       const offered = Array.from(getSelect().querySelectorAll('option'))
         .map((option) => option.value)
         .filter(Boolean);
-      expect(offered).toEqual(['p-gemini|gemini-2.5-flash-image', 'p-gemini|gemini-3-pro-image-preview']);
+      expect(offered).toEqual([
+        'p-gemini|gemini-2.5-flash-image',
+        'p-gemini|gemini-3-pro-image-preview',
+        'p-openai|gpt-image-1',
+      ]);
     });
 
     it('saves the chosen model through the shared setting and keeps the switch as it was', async () => {
