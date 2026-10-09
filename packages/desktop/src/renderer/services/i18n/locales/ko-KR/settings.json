@@ -1492,6 +1492,8 @@
     "imageAdmin": "여기에서 선택한 이미지 모델은 모든 사용자에게 적용됩니다.",
     "imageReadonly": "이미지 모델은 관리자가 구성합니다.",
     "imageUnsupported": "이 서버에는 이미지 생성 구성 요소가 설치되어 있지 않습니다.",
+    "imageLoadFailed": "이미지 생성 설정을 불러오지 못했습니다.",
+    "imageChoiceUnavailable": "선택한 이미지 모델을 더 이상 사용할 수 없습니다.",
     "serverDirs": "설치 시 결정되며 모든 사용자가 공유합니다."
   }
 }

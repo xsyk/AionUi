@@ -1492,6 +1492,8 @@
     "imageAdmin": "這裡選擇的圖像模型對所有使用者生效。",
     "imageReadonly": "圖像模型由管理員統一設定。",
     "imageUnsupported": "本伺服器沒有安裝圖像生成元件。",
+    "imageLoadFailed": "載入圖像生成設定失敗。",
+    "imageChoiceUnavailable": "所選的圖像模型已無法使用。",
     "serverDirs": "安裝時確定，所有使用者共用。"
   }
 }

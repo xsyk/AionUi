@@ -1490,6 +1490,8 @@
     "imageAdmin": "Das hier gewählte Bildmodell gilt für alle Benutzer.",
     "imageReadonly": "Das Bildmodell wird vom Administrator konfiguriert.",
     "imageUnsupported": "Auf diesem Server ist die Bildgenerierung nicht installiert.",
+    "imageLoadFailed": "Die Einstellungen der Bildgenerierung konnten nicht geladen werden.",
+    "imageChoiceUnavailable": "Das gewählte Bildmodell ist nicht mehr verfügbar.",
     "serverDirs": "Bei der Installation festgelegt und von allen Benutzern gemeinsam genutzt."
   }
 }

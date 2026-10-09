@@ -1490,6 +1490,8 @@
     "imageAdmin": "Burada seçilen görüntü modeli tüm kullanıcılar için geçerlidir.",
     "imageReadonly": "Görüntü modeli yönetici tarafından yapılandırılır.",
     "imageUnsupported": "Bu sunucuda görüntü oluşturma bileşeni kurulu değil.",
+    "imageLoadFailed": "Görüntü oluşturma ayarları yüklenemedi.",
+    "imageChoiceUnavailable": "Seçilen görüntü modeli artık kullanılamıyor.",
     "serverDirs": "Kurulum sırasında belirlenir ve tüm kullanıcılar tarafından paylaşılır."
   }
 }

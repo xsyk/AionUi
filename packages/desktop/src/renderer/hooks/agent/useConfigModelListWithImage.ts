@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useProvidersQuery } from './useModelProviderList';
 
 const useConfigModelListWithImage = () => {
-  const { data } = useProvidersQuery();
+  const { data, isLoading } = useProvidersQuery();
 
   const modelListWithImage = useMemo(() => {
     return (data || []).map((platform) => {
@@ -47,6 +47,8 @@ const useConfigModelListWithImage = () => {
 
   return {
     modelListWithImage,
+    /** True until the providers have first arrived. The list is empty meanwhile, which is not "no providers". */
+    isLoading,
   };
 };
 

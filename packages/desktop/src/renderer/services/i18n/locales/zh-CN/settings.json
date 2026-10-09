@@ -1491,6 +1491,8 @@
     "imageAdmin": "这里选择的图像模型对所有用户生效。",
     "imageReadonly": "图像模型由管理员统一配置。",
     "imageUnsupported": "本服务器没有安装图像生成组件。",
+    "imageLoadFailed": "加载图像生成设置失败。",
+    "imageChoiceUnavailable": "所选的图像模型已不可用。",
     "serverDirs": "安装时确定，所有用户共用。"
   }
 }

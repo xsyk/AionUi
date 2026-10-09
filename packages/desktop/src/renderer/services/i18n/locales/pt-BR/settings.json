@@ -1493,6 +1493,8 @@
     "imageAdmin": "O modelo de imagem escolhido aqui se aplica a todos os usuários.",
     "imageReadonly": "O modelo de imagem é configurado pelo administrador.",
     "imageUnsupported": "A geração de imagens não está instalada neste servidor.",
+    "imageLoadFailed": "Falha ao carregar as configurações de geração de imagens.",
+    "imageChoiceUnavailable": "O modelo de imagem escolhido não está mais disponível.",
     "serverDirs": "Definido na instalação e compartilhado por todos os usuários."
   }
 }

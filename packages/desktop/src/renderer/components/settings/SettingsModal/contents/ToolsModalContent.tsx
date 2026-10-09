@@ -9,7 +9,7 @@ import { imageGeneration } from '@/common/adapter/ipcBridge';
 import type { ImageGenerationSettings, ImageGenerationSettingsUpdate } from '@/common/config/clientSettings';
 import type { IMcpServer } from '@/common/config/storage';
 import { isImageGenSupported } from '@/common/utils/imageModelAllowlist';
-import { Alert, Divider, Form, Tooltip, Message, Modal, Switch } from '@arco-design/web-react';
+import { Alert, Button, Divider, Form, Tooltip, Message, Modal, Switch } from '@arco-design/web-react';
 import { Help } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +18,7 @@ import useConfigModelListWithImage from '@/renderer/hooks/agent/useConfigModelLi
 import AionScrollArea from '@/renderer/components/base/AionScrollArea';
 import AionSelect from '@/renderer/components/base/AionSelect';
 import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
-import SharedConfigNotice from '@/renderer/components/settings/SettingsModal/SharedConfigNotice';
+import SharedConfigNotice, { STATUS_ROLE_PROPS } from '@/renderer/components/settings/SettingsModal/SharedConfigNotice';
 import AddMcpServerModal from '@/renderer/pages/settings/components/AddMcpServerModal';
 import McpServerItem from '@/renderer/pages/settings/ToolsSettings/McpServerItem';
 import { useCanManageSharedConfig } from '@/renderer/hooks/context/useCanManageSharedConfig';
@@ -260,10 +260,6 @@ const ModalMcpManagementSection: React.FC<{
 
 const IMAGE_GENERATION_SWR_KEY = 'settings.imageGeneration';
 
-// Arco's Alert puts role="alert" on its root, which screen readers announce assertively, but lets any extra prop
-// override it (AlertProps just does not declare `role`, hence the spread). This hint is static, so it is a status.
-const STATUS_ROLE_PROPS = { role: 'status' };
-
 const toModelOptionValue = (providerId: string, model: string) => `${providerId}|${model}`;
 
 /** Why the backend refused a save. A 400 carries the reason (unknown provider, model not offered, ...). */
@@ -279,18 +275,24 @@ const ImageGenerationSection: React.FC<{ message: MessageInstance }> = ({ messag
   const { t } = useTranslation();
   const canManage = useCanManageSharedConfig();
   const navigateToSettingsTab = useSettingsTabNavigate();
-  const { modelListWithImage: data } = useConfigModelListWithImage();
+  const { modelListWithImage: data, isLoading: isProvidersLoading } = useConfigModelListWithImage();
   const {
     data: settings,
+    error: loadError,
     isLoading,
+    isValidating,
     mutate,
-  } = useSWR<ImageGenerationSettings>(IMAGE_GENERATION_SWR_KEY, () => imageGeneration.get.invoke());
+  } = useSWR<ImageGenerationSettings>(IMAGE_GENERATION_SWR_KEY, () => imageGeneration.get.invoke(), {
+    onError: (error) => console.error('[ImageGen] Failed to load the shared image generation setting:', error),
+  });
   const [isSaving, setIsSaving] = useState(false);
 
-  // Providers that offer at least one image model the generation tool can use, with only those models.
+  // Providers that offer at least one image model the generation tool can use, with only those models. A disabled
+  // provider is left out: the backend adds the tool for an enabled provider only, so its models would never run.
   const imageGenerationModelList = useMemo(
     () =>
       (data ?? []).flatMap((provider) => {
+        if (provider.enabled === false) return [];
         const models = provider.models.filter((modelName) => isImageGenSupported(provider, modelName));
         return models.length > 0 ? [{ id: provider.id, name: provider.name, models }] : [];
       }),
@@ -332,20 +334,36 @@ const ImageGenerationSection: React.FC<{ message: MessageInstance }> = ({ messag
   const handleToggle = useCallback(
     (checked: boolean) => {
       if (!canManage || !settings) return;
+      // The stored choice goes back as it is, switched on or off. The backend takes "off" whatever state the
+      // provider is in, so a choice whose provider has gone can still be turned off; it is never cleaned up here.
       void save({ provider_id: settings.provider_id, model: settings.model, enabled: checked });
     },
     [canManage, save, settings]
   );
 
+  const retryLoad = useCallback(() => {
+    void mutate();
+  }, [mutate]);
+
   // Until the server has answered nothing is known, so nothing is claimed missing.
   const isSupported = settings?.supported !== false;
-  const hasModel = Boolean(settings?.provider_id && settings.model);
+  const savedChoice =
+    settings?.provider_id && settings.model ? { providerId: settings.provider_id, model: settings.model } : undefined;
+  const hasModel = savedChoice !== undefined;
+  // The saved choice stops being offered when its provider is deleted or disabled, or no longer has the model. The
+  // backend then adds nothing to any session, so the page says so instead of letting the selector look healthy. It is
+  // judged only once the provider list has arrived: until then the list is empty and every choice would look gone.
+  const isChoiceUnavailable =
+    savedChoice !== undefined &&
+    !isProvidersLoading &&
+    !imageGenerationModelList.some(
+      (provider) => provider.id === savedChoice.providerId && provider.models.includes(savedChoice.model)
+    );
   // Only the administrator can change it, and not while it is unknown, being saved, or unable to run here.
   const isLocked = !canManage || !settings || isSaving || !isSupported;
   // Turning it on needs a model; turning it off is always possible.
   const isSwitchDisabled = isLocked || (!settings?.enabled && !hasModel);
-  const selectedValue =
-    settings?.provider_id && settings.model ? toModelOptionValue(settings.provider_id, settings.model) : undefined;
+  const selectedValue = savedChoice && toModelOptionValue(savedChoice.providerId, savedChoice.model);
 
   return (
     <div className='px-[12px] md:px-[32px] py-[24px] bg-2 rd-12px md:rd-16px border border-border-2 flex flex-col gap-16px'>
@@ -375,12 +393,34 @@ const ImageGenerationSection: React.FC<{ message: MessageInstance }> = ({ messag
           data-testid='image-generation-unsupported'
         />
       )}
+      {/* Without the setting the controls are locked and the switch reads as off, which an empty setting looks like
+          too, so a failed load has to say so. It appears on its own, hence it keeps Arco's alert role. */}
+      {loadError !== undefined && (
+        <Alert
+          type='error'
+          content={t('settings.sharedConfig.imageLoadFailed')}
+          action={
+            <Button size='mini' loading={isValidating} onClick={retryLoad}>
+              {t('common.retry')}
+            </Button>
+          }
+          className='!rounded-8px'
+          data-testid='image-generation-load-error'
+        />
+      )}
 
       <Divider className='!my-0' />
 
       <Form layout='horizontal' labelAlign='left' className='space-y-12px'>
         <Form.Item
           label={t('settings.imageGenerationModel')}
+          extra={
+            isChoiceUnavailable ? (
+              <span className='text-warning' data-testid='image-generation-choice-unavailable'>
+                {t('settings.sharedConfig.imageChoiceUnavailable')}
+              </span>
+            ) : undefined
+          }
           tooltip={
             <div className='space-y-4px'>
               <div>{t('settings.imageGenSupportedTooltipTitle')}</div>

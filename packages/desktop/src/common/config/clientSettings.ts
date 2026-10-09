@@ -33,6 +33,10 @@ export type ImageGenerationSettingsUpdate = Omit<ImageGenerationSettings, 'suppo
 export type ClientBusinessSettingMap = {
   'google.config': GoogleClientSetting;
   'mcp.config': IMcpServer[] | undefined;
+  /**
+   * @deprecated Superseded by the shared `/api/settings/image-generation` setting in 1.0.1
+   * ({@link ImageGenerationSettings}); still read by the desktop migration only.
+   */
   'tools.imageGenerationModel': ImageGenerationModelSetting | undefined;
   'tools.speechToText': SpeechToTextConfig | undefined;
   'acp.promptTimeout': number | undefined;

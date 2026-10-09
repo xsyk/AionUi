@@ -18,8 +18,9 @@ type SharedConfigNoticeProps = {
 };
 
 // Arco's Alert puts role="alert" on its root, which screen readers announce assertively, but lets any extra prop
-// override it (AlertProps just does not declare `role`, hence the spread). This banner is static, so it is a status.
-const STATUS_ROLE_PROPS = { role: 'status' };
+// override it (AlertProps just does not declare `role`, hence the spread). A banner or hint that is static is a
+// status, so settings pages spread this into theirs.
+export const STATUS_ROLE_PROPS = { role: 'status' };
 
 /**
  * Info banner at the top of a settings page whose configuration is shared by

@@ -7,6 +7,8 @@
  * picks it, every user's sessions get the tool, and the backend injects the MCP server itself. These tests pin
  * the page side of that rule: it reads and writes /api/settings/image-generation only, never the per-user
  * preference or the per-user built-in MCP row, and everyone but the administrator sees it read-only.
+ * They also pin that the page never lets a stale state pass for a healthy one: a setting that failed to load
+ * says so, and a saved model that is no longer offered is flagged.
  */
 
 import React from 'react';
@@ -55,10 +57,15 @@ const SAVED_SETTINGS = {
 };
 const EMPTY_SETTINGS = { provider_id: null, model: null, enabled: false, supported: true };
 
+// The i18n mock returns the key, so these are the texts the page shows.
+const LOAD_FAILED = 'settings.sharedConfig.imageLoadFailed';
+const CHOICE_UNAVAILABLE = 'settings.sharedConfig.imageChoiceUnavailable';
+
 const mocks = vi.hoisted(() => ({
   authUser: null as MockAuthUser | null,
   isDesktop: false,
   providers: [] as unknown[],
+  providersLoading: false,
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
   updateServer: vi.fn(),
@@ -163,7 +170,7 @@ vi.mock('@/renderer/pages/settings/ToolsSettings/McpServerItem', () => ({
 }));
 
 vi.mock('@/renderer/hooks/agent/useConfigModelListWithImage', () => ({
-  default: () => ({ modelListWithImage: mocks.providers }),
+  default: () => ({ modelListWithImage: mocks.providers, isLoading: mocks.providersLoading }),
 }));
 
 vi.mock('@/renderer/hooks/mcp', () => ({
@@ -235,16 +242,22 @@ vi.mock('@/renderer/utils/platform', async (importOriginal) => ({
 
 import ToolsModalContent from '@/renderer/components/settings/SettingsModal/contents/ToolsModalContent';
 
-/** Mounts the page over a fresh SWR cache so one test's settings never leak into the next. */
-const renderTools = () =>
-  render(
-    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, shouldRetryOnError: false }}>
-      <ToolsModalContent />
-    </SWRConfig>
-  );
+/** The page over a fresh SWR cache, so one test's settings never leak into the next. */
+const toolsTree = () => (
+  <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, shouldRetryOnError: false }}>
+    <ToolsModalContent />
+  </SWRConfig>
+);
+
+const renderTools = () => render(toolsTree());
 
 const getSwitch = () => screen.getByTestId('image-generation-switch');
 const getSelect = () => screen.getByTestId('image-model-select') as HTMLSelectElement;
+/** The model values the dropdown offers, in order. */
+const getOfferedValues = () =>
+  Array.from(getSelect().querySelectorAll('option'))
+    .map((option) => option.value)
+    .filter(Boolean);
 
 /** Waits until the shared setting has arrived: the switch stops showing its loading state. */
 const renderLoaded = async () => {
@@ -258,6 +271,7 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
     mocks.authUser = ADMIN_USER;
     mocks.isDesktop = false;
     mocks.providers = [GEMINI_PROVIDER, OPENAI_PROVIDER, ANTHROPIC_PROVIDER];
+    mocks.providersLoading = false;
     mocks.getSettings.mockReset().mockResolvedValue(SAVED_SETTINGS);
     mocks.updateSettings.mockReset().mockImplementation(async (body: object) => ({ ...body, supported: true }));
     mocks.updateServer.mockReset();
@@ -318,14 +332,41 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
     it('offers only the image models of providers the generation tool can talk to', async () => {
       await renderLoaded();
 
-      const offered = Array.from(getSelect().querySelectorAll('option'))
-        .map((option) => option.value)
-        .filter(Boolean);
-      expect(offered).toEqual([
+      expect(getOfferedValues()).toEqual([
         'p-gemini|gemini-2.5-flash-image',
         'p-gemini|gemini-3-pro-image-preview',
         'p-openai|gpt-image-1',
       ]);
+    });
+
+    it('does not offer the models of a provider that has been disabled', async () => {
+      // `enabled` is optional and means on when missing; only an explicit false turns a provider off.
+      mocks.providers = [
+        { ...GEMINI_PROVIDER, enabled: false },
+        { ...GEMINI_PROVIDER, id: 'p-gemini-2', name: 'Gemini 2', enabled: true, models: ['gemini-2.5-flash-image'] },
+        OPENAI_PROVIDER,
+      ];
+      await renderLoaded();
+
+      expect(getOfferedValues()).toEqual(['p-gemini-2|gemini-2.5-flash-image', 'p-openai|gpt-image-1']);
+    });
+
+    it('lists nothing when every provider that could serve an image model is disabled', async () => {
+      mocks.providers = [
+        { ...GEMINI_PROVIDER, enabled: false },
+        { ...OPENAI_PROVIDER, enabled: false },
+      ];
+      await renderLoaded();
+
+      expect(screen.queryByTestId('image-model-select')).not.toBeInTheDocument();
+      expect(screen.getByText(/settings\.noAvailable/)).toBeInTheDocument();
+    });
+
+    it('says nothing is wrong while the saved choice is offered and the setting has loaded', async () => {
+      await renderLoaded();
+
+      expect(screen.queryByText(CHOICE_UNAVAILABLE)).not.toBeInTheDocument();
+      expect(screen.queryByText(LOAD_FAILED)).not.toBeInTheDocument();
     });
 
     it('lists the OpenAI Images models among the supported ones in the hint next to the selector', async () => {
@@ -403,6 +444,37 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
       expect(getSelect()).toHaveValue('p-gemini|gemini-2.5-flash-image');
     });
 
+    // The server accepts "off" whatever state the provider is in, so the click sends the stored choice as it is:
+    // not a model swapped in from the list, not a cleared choice. Anything else could be refused for a stale provider.
+    it('turns the tool off with the stored choice, exactly, when its provider has been removed', async () => {
+      mocks.getSettings.mockResolvedValue({ ...SAVED_SETTINGS, provider_id: 'p-removed' });
+      await renderLoaded();
+
+      fireEvent.click(getSwitch());
+
+      await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+      expect(mocks.updateSettings.mock.calls[0][0]).toStrictEqual({
+        provider_id: 'p-removed',
+        model: 'gemini-2.5-flash-image',
+        enabled: false,
+      });
+      await waitFor(() => expect(getSwitch()).toHaveAttribute('aria-checked', 'false'));
+    });
+
+    it('turns the tool off with the stored choice, exactly, when its provider has been disabled', async () => {
+      mocks.providers = [{ ...GEMINI_PROVIDER, enabled: false }, OPENAI_PROVIDER];
+      await renderLoaded();
+
+      fireEvent.click(getSwitch());
+
+      await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+      expect(mocks.updateSettings.mock.calls[0][0]).toStrictEqual({
+        provider_id: 'p-gemini',
+        model: 'gemini-2.5-flash-image',
+        enabled: false,
+      });
+    });
+
     it('keeps the switch disabled until a model is chosen', async () => {
       mocks.getSettings.mockResolvedValue(EMPTY_SETTINGS);
       await renderLoaded();
@@ -464,6 +536,111 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
 
       await waitFor(() => expect(mocks.messageError).toHaveBeenCalledWith('common.saveFailed'));
       expect(getSwitch()).toHaveAttribute('aria-checked', 'true');
+    });
+  });
+
+  // The saved choice is stored on the server, the offered list comes from the configured providers. When a provider
+  // is deleted or disabled the two part ways, and the backend then adds nothing to any session, so the page must not
+  // let the saved choice pass for a working one.
+  describe('when the saved choice is no longer offered', () => {
+    const REMOVED_PROVIDER_SETTINGS = { ...SAVED_SETTINGS, provider_id: 'p-removed' };
+
+    it('warns the administrator next to the selector, which keeps showing the saved choice', async () => {
+      mocks.getSettings.mockResolvedValue(REMOVED_PROVIDER_SETTINGS);
+      await renderLoaded();
+
+      expect(getSelect().closest('.arco-form-item')).toContainElement(screen.getByText(CHOICE_UNAVAILABLE));
+      expect(screen.getByTestId('image-model-shown')).toHaveTextContent(/^gemini-2\.5-flash-image$/);
+    });
+
+    it('leaves the switch as it was stored, so the administrator can still turn it off', async () => {
+      mocks.getSettings.mockResolvedValue(REMOVED_PROVIDER_SETTINGS);
+      await renderLoaded();
+
+      expect(screen.getByText(CHOICE_UNAVAILABLE)).toBeInTheDocument();
+      expect(getSwitch()).toHaveAttribute('aria-checked', 'true');
+      expect(getSwitch()).toBeEnabled();
+    });
+
+    it('warns when the provider is still there but has been disabled', async () => {
+      mocks.providers = [{ ...GEMINI_PROVIDER, enabled: false }, OPENAI_PROVIDER];
+      await renderLoaded();
+
+      expect(screen.getByText(CHOICE_UNAVAILABLE)).toBeInTheDocument();
+      expect(getOfferedValues()).toEqual(['p-openai|gpt-image-1']);
+    });
+
+    it('warns when the provider is still offered but no longer offers the saved model', async () => {
+      // The provider lists it, but it is a chat model: it is not one of the image models the dropdown offers.
+      mocks.getSettings.mockResolvedValue({ ...SAVED_SETTINGS, model: 'gemini-2.5-pro' });
+      await renderLoaded();
+
+      expect(screen.getByText(CHOICE_UNAVAILABLE)).toBeInTheDocument();
+    });
+
+    it('warns when the provider no longer lists the saved model at all', async () => {
+      mocks.getSettings.mockResolvedValue({ ...SAVED_SETTINGS, model: 'gemini-1.5-flash-image' });
+      await renderLoaded();
+
+      expect(screen.getByText(CHOICE_UNAVAILABLE)).toBeInTheDocument();
+    });
+
+    it('warns when no provider offers an image model any more, where there is no selector to look at', async () => {
+      mocks.providers = [];
+      await renderLoaded();
+
+      expect(screen.getByText(/settings\.noAvailable/)).toBeInTheDocument();
+      expect(screen.getByTestId('image-generation-choice-unavailable')).toHaveTextContent(CHOICE_UNAVAILABLE);
+    });
+
+    it('warns a user who is not the administrator too, who still cannot change anything', async () => {
+      mocks.authUser = REGULAR_USER;
+      mocks.getSettings.mockResolvedValue(REMOVED_PROVIDER_SETTINGS);
+      await renderLoaded();
+
+      expect(screen.getByText(CHOICE_UNAVAILABLE)).toBeInTheDocument();
+      expect(getSelect()).toBeDisabled();
+      expect(getSwitch()).toBeDisabled();
+    });
+
+    it('goes away once the administrator picks a model that is offered', async () => {
+      mocks.getSettings.mockResolvedValue(REMOVED_PROVIDER_SETTINGS);
+      await renderLoaded();
+
+      fireEvent.change(getSelect(), { target: { value: 'p-openai|gpt-image-1' } });
+
+      await waitFor(() =>
+        expect(mocks.updateSettings).toHaveBeenCalledWith({
+          provider_id: 'p-openai',
+          model: 'gpt-image-1',
+          enabled: true,
+        })
+      );
+      await waitFor(() => expect(screen.queryByText(CHOICE_UNAVAILABLE)).not.toBeInTheDocument());
+      expect(getSelect()).toHaveValue('p-openai|gpt-image-1');
+    });
+
+    it('says nothing when no model has been chosen yet', async () => {
+      mocks.getSettings.mockResolvedValue(EMPTY_SETTINGS);
+      await renderLoaded();
+
+      expect(screen.queryByText(CHOICE_UNAVAILABLE)).not.toBeInTheDocument();
+    });
+
+    it('judges the saved choice only once the provider list is known, not while it is still loading', async () => {
+      // The list is empty until the providers arrive, which would make every saved choice look removed.
+      mocks.providersLoading = true;
+      mocks.providers = [];
+      const view = await renderLoaded();
+
+      expect(screen.queryByText(CHOICE_UNAVAILABLE)).not.toBeInTheDocument();
+
+      // It arrives without the saved provider: now it is a fact.
+      mocks.providersLoading = false;
+      mocks.providers = [OPENAI_PROVIDER];
+      view.rerender(toolsTree());
+
+      expect(await screen.findByText(CHOICE_UNAVAILABLE)).toBeInTheDocument();
     });
   });
 
@@ -570,7 +747,15 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
       expect(getSwitch()).toHaveAttribute('aria-checked', 'false');
     });
 
+    it('shows no error while it is still loading', () => {
+      mocks.getSettings.mockReturnValue(new Promise(() => {}));
+      renderTools();
+
+      expect(screen.queryByText(LOAD_FAILED)).not.toBeInTheDocument();
+    });
+
     it('keeps them locked when it cannot be loaded, so nothing is saved blind', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
       mocks.getSettings.mockRejectedValue(new Error('offline'));
       renderTools();
 
@@ -578,6 +763,112 @@ describe('ToolsModalContent image generation (server-wide setting)', () => {
       await waitFor(() => expect(getSwitch()).not.toHaveClass('arco-switch-loading'));
       expect(getSwitch()).toBeDisabled();
       expect(getSelect()).toBeDisabled();
+    });
+  });
+
+  // A switch that is off and locked is also what an empty setting looks like, so a failed load must not stay silent.
+  describe('when the shared setting cannot be loaded', () => {
+    beforeEach(() => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    it('says so, with a way to try again, instead of looking like the tool is simply off', async () => {
+      mocks.getSettings.mockRejectedValue(new Error('offline'));
+      renderTools();
+
+      expect(await screen.findByText(LOAD_FAILED)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'common.retry' })).toBeEnabled();
+      expect(getSwitch()).toBeDisabled();
+      expect(getSwitch()).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('tells a user who is not the administrator too', async () => {
+      mocks.authUser = REGULAR_USER;
+      mocks.getSettings.mockRejectedValue(new Error('offline'));
+      renderTools();
+
+      expect(await screen.findByText(LOAD_FAILED)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'common.retry' })).toBeEnabled();
+    });
+
+    it('announces the failure as an alert, unlike the static hints on the page', async () => {
+      mocks.getSettings.mockRejectedValue(new Error('offline'));
+      renderTools();
+
+      const alert = await screen.findByRole('alert');
+      expect(alert).toBe(screen.getByTestId('image-generation-load-error'));
+      expect(alert).toHaveTextContent(LOAD_FAILED);
+    });
+
+    it('asks the server again on retry and shows the setting once it arrives', async () => {
+      mocks.getSettings.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(SAVED_SETTINGS);
+      renderTools();
+
+      fireEvent.click(await screen.findByRole('button', { name: 'common.retry' }));
+
+      await waitFor(() => expect(getSelect()).toHaveValue('p-gemini|gemini-2.5-flash-image'));
+      expect(mocks.getSettings).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText(LOAD_FAILED)).not.toBeInTheDocument();
+      expect(getSwitch()).toHaveAttribute('aria-checked', 'true');
+      expect(getSwitch()).toBeEnabled();
+    });
+
+    it('keeps the error, and the retry, when the second attempt fails too', async () => {
+      mocks.getSettings.mockRejectedValue(new Error('still offline'));
+      renderTools();
+
+      fireEvent.click(await screen.findByRole('button', { name: 'common.retry' }));
+
+      await waitFor(() => expect(mocks.getSettings).toHaveBeenCalledTimes(2));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'common.retry' })).not.toHaveClass('arco-btn-loading')
+      );
+      expect(screen.getByText(LOAD_FAILED)).toBeInTheDocument();
+      expect(getSwitch()).toBeDisabled();
+    });
+
+    it('does not ask twice while a retry is still waiting for the server', async () => {
+      mocks.getSettings.mockRejectedValueOnce(new Error('offline')).mockReturnValue(new Promise(() => {}));
+      renderTools();
+
+      const retry = await screen.findByRole('button', { name: 'common.retry' });
+      fireEvent.click(retry);
+      await waitFor(() => expect(retry).toHaveClass('arco-btn-loading'));
+      fireEvent.click(retry);
+
+      expect(mocks.getSettings).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not claim anything is wrong with the saved choice, which it cannot see', async () => {
+      mocks.getSettings.mockRejectedValue(new Error('offline'));
+      renderTools();
+
+      await screen.findByText(LOAD_FAILED);
+      expect(screen.queryByText(CHOICE_UNAVAILABLE)).not.toBeInTheDocument();
+    });
+
+    it('says so when only a refresh fails, and keeps the last known setting on screen', async () => {
+      // A refused save makes the page ask again; when that fails the saved choice is stale, not gone.
+      mocks.getSettings.mockResolvedValueOnce(SAVED_SETTINGS).mockRejectedValue(new Error('offline'));
+      mocks.updateSettings.mockRejectedValue(new Error('network down'));
+      await renderLoaded();
+
+      fireEvent.click(getSwitch());
+
+      expect(await screen.findByText(LOAD_FAILED)).toBeInTheDocument();
+      expect(getSelect()).toHaveValue('p-gemini|gemini-2.5-flash-image');
+      expect(getSwitch()).toHaveAttribute('aria-checked', 'true');
+    });
+  });
+
+  describe('static hints', () => {
+    it('are announced as status messages, not as assertive alerts', async () => {
+      mocks.getSettings.mockResolvedValue({ ...SAVED_SETTINGS, supported: false });
+      await renderLoaded();
+
+      expect(screen.getByTestId('shared-config-notice')).toHaveAttribute('role', 'status');
+      expect(screen.getByTestId('image-generation-unsupported')).toHaveAttribute('role', 'status');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 });

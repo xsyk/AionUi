@@ -2431,6 +2431,8 @@ export type I18nKey =
   | 'settings.sharedConfig.agentsAdmin'
   | 'settings.sharedConfig.agentsReadonly'
   | 'settings.sharedConfig.imageAdmin'
+  | 'settings.sharedConfig.imageChoiceUnavailable'
+  | 'settings.sharedConfig.imageLoadFailed'
   | 'settings.sharedConfig.imageReadonly'
   | 'settings.sharedConfig.imageUnsupported'
   | 'settings.sharedConfig.modelsAdmin'
