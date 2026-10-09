@@ -34,6 +34,8 @@ type FakeFsOptions = {
   dirs?: string[];
   /** mkdirSync on a path at or below the key throws an errno error with the value as `code`. */
   mkdirErrors?: Record<string, string>;
+  /** readFileSync on exactly the key throws an errno error with the value as `code`, whether or not the file exists. */
+  readErrors?: Record<string, string>;
 };
 
 function errnoError(code: string, syscall: string, target: string): NodeJS.ErrnoException {
@@ -52,7 +54,7 @@ function createFakeFs(options: FakeFsOptions = {}) {
   const dirs = new Set<string>();
   /** Every path handed to mkdirSync, in call order (failed calls included). */
   const mkdirCalls: string[] = [];
-  /** Every path handed to existsSync/readFileSync, in call order. */
+  /** Every path handed to readFileSync, in call order. */
   const readCalls: string[] = [];
   /** Every path handed to writeFileSync, in call order. */
   const writeCalls: string[] = [];
@@ -72,16 +74,16 @@ function createFakeFs(options: FakeFsOptions = {}) {
     files.set(path.normalize(file), content);
     addDir(path.dirname(file));
   }
+  const readErrors = new Map(
+    Object.entries(options.readErrors ?? {}).map(([file, code]): [string, string] => [path.normalize(file), code])
+  );
 
   const fakeFs: InstallDirsFs = {
-    existsSync: (p) => {
-      const target = path.normalize(p);
-      readCalls.push(target);
-      return files.has(target) || dirs.has(target);
-    },
     readFileSync: (p) => {
       const target = path.normalize(p);
       readCalls.push(target);
+      const readError = readErrors.get(target);
+      if (readError !== undefined) throw errnoError(readError, 'open', p);
       const content = files.get(target);
       if (content === undefined) throw errnoError('ENOENT', 'open', p);
       return content;
@@ -264,6 +266,54 @@ describe('resolveInstallDirs: install-dirs.json already exists', () => {
 
     expect(result).toEqual({ workDir: DEFAULT_WORK_DIR, logDir: DEFAULT_LOG_DIR, source: 'installed' });
     expect(readRecord(files)).toEqual({ workDir: DEFAULT_WORK_DIR, logDir: DEFAULT_LOG_DIR });
+  });
+});
+
+describe('resolveInstallDirs: install-dirs.json cannot be read', () => {
+  // Only "no such file", "not JSON" and "wrong shape" mean there is no usable record. Any other failure says
+  // nothing about what is recorded, and deciding again could move the dirs away from the data already written.
+  it.each(['EIO', 'EACCES', 'EMFILE'])(
+    'throws on %s without probing /data, falling back to home or rewriting the record',
+    (code) => {
+      const files = recordOf(HOME_WORK_DIR, HOME_LOG_DIR);
+      const fake = createFakeFs({ files, readErrors: { [RECORD_PATH]: code } });
+
+      const error = catchError(() => resolveInstallDirs({ dataDir: DATA_DIR, homeDir: HOME_DIR, fs: fake.fs }));
+
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain(`Cannot read ${RECORD_PATH}`);
+      expect(error).toMatchObject({ code });
+      expect((error as Error).cause).toMatchObject({ code });
+      // Nothing was created, neither under /data nor under home, and the record is exactly as it was.
+      expect(fake.mkdirCalls).toEqual([]);
+      expect(fake.dirs.has(path.normalize(DEFAULT_WORK_DIR))).toBe(false);
+      expect(fake.writeCalls).toEqual([]);
+      expect(fake.files.get(path.normalize(RECORD_PATH))).toBe(files[RECORD_PATH]);
+    }
+  );
+
+  it('still throws when only the log dir is explicit, because the work dir would have to come from the record', () => {
+    const logDir = path.resolve('/var/log/aionui');
+    const fake = createFakeFs({ files: recordOf(HOME_WORK_DIR, HOME_LOG_DIR), readErrors: { [RECORD_PATH]: 'EIO' } });
+
+    const error = catchError(() =>
+      resolveInstallDirs({ dataDir: DATA_DIR, homeDir: HOME_DIR, explicitLogDir: logDir, fs: fake.fs })
+    );
+
+    expect(error).toMatchObject({ code: 'EIO' });
+    expect((error as Error).message).toContain(`Cannot read ${RECORD_PATH}`);
+    expect(fake.mkdirCalls).toEqual([]);
+    expect(fake.writeCalls).toEqual([]);
+  });
+
+  it('does not stand in the way of an explicit work dir, which never reads the record', () => {
+    const workDir = path.resolve('/srv/aionui/work');
+    const fake = createFakeFs({ files: recordOf(HOME_WORK_DIR, HOME_LOG_DIR), readErrors: { [RECORD_PATH]: 'EIO' } });
+
+    const result = resolveInstallDirs({ dataDir: DATA_DIR, homeDir: HOME_DIR, explicitWorkDir: workDir, fs: fake.fs });
+
+    expect(result).toEqual({ workDir, logDir: path.join(workDir, 'logs'), source: 'explicit' });
+    expect(fake.readCalls).not.toContain(path.normalize(RECORD_PATH));
   });
 });
 

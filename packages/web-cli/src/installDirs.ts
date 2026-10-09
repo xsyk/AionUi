@@ -39,7 +39,6 @@ export type InstallDirs = {
 
 /** The slice of `node:fs` used here, so tests can run against an in-memory fake. */
 export type InstallDirsFs = {
-  existsSync(p: string): boolean;
   readFileSync(p: string, enc: 'utf8'): string;
   writeFileSync(p: string, data: string): void;
   mkdirSync(p: string, opts: { recursive: true }): unknown;
@@ -69,24 +68,57 @@ function errorCode(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
+/**
+ * An error for a failed file system call, worded `<summary>: <reason>. <hint>`.
+ * The original is kept as `cause` and its errno `code` (if any) is copied over,
+ * so callers can still tell EACCES from ENOSPC.
+ */
+function wrapFsError(summary: string, hint: string, error: unknown): Error {
+  const reason = error instanceof Error ? error.message : String(error);
+  const wrapped = new Error(`${summary}: ${reason}. ${hint}`, { cause: error });
+  const code = errorCode(error);
+  return code ? Object.assign(wrapped, { code }) : wrapped;
+}
+
 function isAbsolutePath(value: unknown): value is string {
   // An empty string is not absolute, so this also rejects blank fields.
   return typeof value === 'string' && path.isAbsolute(value);
 }
 
-/** The recorded choice, or `undefined` when there is none or it is unusable. */
+/**
+ * The recorded choice, or `undefined` when there is none: the file does not
+ * exist (ENOENT), is not JSON, or does not hold two absolute paths.
+ *
+ * Any other failure to read it (EIO, EACCES, EMFILE, ...) says nothing about
+ * what was recorded, so it throws. Deciding again could move the directories
+ * away from the data already written there. There is deliberately no
+ * `existsSync` first: it answers false for every failure (for example EACCES
+ * on the data dir), which would read as "no record" just the same.
+ */
 function readRecord(fs: InstallDirsFs, recordPath: string): { workDir: string; logDir: string } | undefined {
+  let content: string;
   try {
-    if (!fs.existsSync(recordPath)) return undefined;
-    const parsed: unknown = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
-    if (typeof parsed !== 'object' || parsed === null) return undefined;
-    const { workDir, logDir } = parsed as { workDir?: unknown; logDir?: unknown };
-    if (!isAbsolutePath(workDir) || !isAbsolutePath(logDir)) return undefined;
-    return { workDir, logDir };
+    content = fs.readFileSync(recordPath, 'utf8');
+  } catch (error) {
+    if (errorCode(error) === 'ENOENT') return undefined;
+    throw wrapFsError(
+      `Cannot read ${recordPath} (it records the directories chosen at installation)`,
+      'Fix the cause and try again, delete the file to choose the directories again, or pass --work-dir.',
+      error
+    );
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
   } catch {
-    // Unreadable or not JSON: treat it like no record at all and decide again.
+    // Not JSON: nothing usable was recorded.
     return undefined;
   }
+  if (typeof parsed !== 'object' || parsed === null) return undefined;
+  const { workDir, logDir } = parsed as { workDir?: unknown; logDir?: unknown };
+  if (!isAbsolutePath(workDir) || !isAbsolutePath(logDir)) return undefined;
+  return { workDir, logDir };
 }
 
 /**
@@ -97,14 +129,11 @@ function ensureRecordedDir(fs: InstallDirsFs, dir: string, recordPath: string): 
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    const wrapped = new Error(
-      `Cannot create ${dir} (recorded at installation in ${recordPath}): ${reason}. ` +
-        `Fix its permissions, delete ${recordPath} to choose the directories again, or pass --work-dir / --log-dir.`,
-      { cause: error }
+    throw wrapFsError(
+      `Cannot create ${dir} (recorded at installation in ${recordPath})`,
+      `Fix its permissions, delete ${recordPath} to choose the directories again, or pass --work-dir / --log-dir.`,
+      error
     );
-    const code = errorCode(error);
-    throw code ? Object.assign(wrapped, { code }) : wrapped;
   }
 }
 
@@ -132,6 +161,14 @@ function writeRecord(fs: InstallDirsFs, dataDir: string, recordPath: string, dec
   fs.writeFileSync(recordPath, `${JSON.stringify(record, null, 2)}\n`);
 }
 
+/**
+ * Resolves the work dir and the log dir. Precedence: an explicit work dir wins outright
+ * (logs default to `<workDir>/logs`, the record is left alone); else the dirs recorded in
+ * `<dataDir>/install-dirs.json`; else the install-time decision, made once and recorded
+ * (`/data/.AionEasiful`, or `<homeDir>/.AionEasiful` when /data is refused for lack of
+ * permission). An explicit log dir overrides the log dir in every case, unrecorded.
+ * An unreadable record or an uncreatable recorded dir throws; it never decides again.
+ */
 export function resolveInstallDirs(input: ResolveInstallDirsInput): InstallDirs {
   const { dataDir, homeDir, explicitWorkDir, explicitLogDir } = input;
   const fs = input.fs ?? nodeFs;
