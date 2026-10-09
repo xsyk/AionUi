@@ -550,9 +550,17 @@ const SystemModalContent: React.FC = () => {
                 )}
               </Collapse.Item>
             </Collapse>
-            <Form form={form} layout='vertical' className='!mt-32px space-y-16px' onValuesChange={handleValuesChange}>
-              <DirInputItem label={t('settings.workDir')} field='workDir' />
-              <DirInputItem label={t('settings.logDir')} field='logDir' />
+            {/* Desktop: the user picks the directories here and the app restarts. Web: the server's launcher fixed
+                both at installation for every user, so they are only shown and nothing is saved. */}
+            <Form
+              form={form}
+              layout='vertical'
+              className='!mt-32px space-y-16px'
+              onValuesChange={isDesktop ? handleValuesChange : undefined}
+            >
+              <DirInputItem label={t('settings.workDir')} field='workDir' readOnly={!isDesktop} />
+              <DirInputItem label={t('settings.logDir')} field='logDir' readOnly={!isDesktop} />
+              {!isDesktop && <div className='text-12px text-t-tertiary'>{t('settings.sharedConfig.serverDirs')}</div>}
               {error && (
                 <Alert
                   className='mt-16px'

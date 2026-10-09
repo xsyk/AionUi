@@ -11,19 +11,27 @@ import userEvent from '@testing-library/user-event';
 import { ConfigProvider } from '@arco-design/web-react';
 import { SWRConfig } from 'swr';
 
-const { systemInfoMock, updateSystemInfoMock, restartMock, showOpenMock, messageInfoMock, configServiceMock } =
-  vi.hoisted(() => ({
-    systemInfoMock: vi.fn(),
-    updateSystemInfoMock: vi.fn(),
-    restartMock: vi.fn(),
-    showOpenMock: vi.fn(),
-    messageInfoMock: vi.fn(),
-    configServiceMock: {
-      get: vi.fn(() => undefined),
-      set: vi.fn(() => Promise.resolve()),
-      setLocal: vi.fn(),
-    },
-  }));
+const {
+  systemInfoMock,
+  updateSystemInfoMock,
+  restartMock,
+  showOpenMock,
+  messageInfoMock,
+  configServiceMock,
+  isElectronDesktopMock,
+} = vi.hoisted(() => ({
+  systemInfoMock: vi.fn(),
+  updateSystemInfoMock: vi.fn(),
+  restartMock: vi.fn(),
+  showOpenMock: vi.fn(),
+  messageInfoMock: vi.fn(),
+  configServiceMock: {
+    get: vi.fn(() => undefined),
+    set: vi.fn(() => Promise.resolve()),
+    setLocal: vi.fn(),
+  },
+  isElectronDesktopMock: vi.fn(() => true),
+}));
 const clientBusinessSettingsMocks = vi.hoisted(() => ({
   getClientBusinessSetting: vi.fn(),
   setClientBusinessSetting: vi.fn(() => Promise.resolve()),
@@ -33,8 +41,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
 }));
 
+// The setup file defines window.electronAPI for every test, so the platform has to be chosen explicitly.
 vi.mock('@/renderer/utils/platform', () => ({
-  isElectronDesktop: () => true,
+  isElectronDesktop: () => isElectronDesktopMock(),
 }));
 
 vi.mock('@/renderer/components/base/AionScrollArea', () => ({
@@ -122,10 +131,17 @@ const renderContent = () =>
     </SWRConfig>
   );
 
+const getDirItem = (label: string): HTMLElement => {
+  const item = screen.getByText(label).closest('.arco-form-item');
+  expect(item).not.toBeNull();
+  return item as HTMLElement;
+};
+
 describe('SystemModalContent directory settings', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    isElectronDesktopMock.mockReturnValue(true);
     configServiceMock.get.mockImplementation(() => undefined);
     configServiceMock.set.mockResolvedValue(undefined);
     clientBusinessSettingsMocks.getClientBusinessSetting.mockImplementation(async (key: string) => {
@@ -308,6 +324,95 @@ describe('SystemModalContent directory settings', () => {
 
     await waitFor(() => {
       expect(clientBusinessSettingsMocks.setClientBusinessSetting).toHaveBeenCalledWith('acp.agentIdleTimeout', 7);
+    });
+  });
+
+  it('keeps the directory pickers and shows no shared-directories note in the desktop app', async () => {
+    renderContent();
+
+    await screen.findByText('/work');
+    for (const label of ['settings.workDir', 'settings.logDir']) {
+      const item = getDirItem(label);
+      expect(within(item).getByRole('button')).toBeInTheDocument();
+      expect(item.querySelector('.aion-dir-input')).toHaveAttribute('tabindex', '0');
+    }
+    expect(screen.queryByText('settings.sharedConfig.serverDirs')).not.toBeInTheDocument();
+  });
+
+  describe('in the web UI', () => {
+    // The server's launcher decides both directories at installation and every user shares them. Saving a
+    // change goes through Electron-only IPC (update-system-info, restart-app) that never answers in a browser.
+    beforeEach(() => {
+      isElectronDesktopMock.mockReturnValue(false);
+    });
+
+    it('shows the server directories as plain text without a folder button', async () => {
+      renderContent();
+
+      await screen.findByText('/work');
+      expect(screen.getByText('/logs')).toBeInTheDocument();
+      expect(within(getDirItem('settings.workDir')).queryByRole('button')).not.toBeInTheDocument();
+      expect(within(getDirItem('settings.logDir')).queryByRole('button')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('settings.changeWorkDir')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('settings.changeLogDir')).not.toBeInTheDocument();
+    });
+
+    it('does not open the directory picker or save anything when a field is clicked or activated by key', async () => {
+      const user = userEvent.setup();
+      renderContent();
+
+      await screen.findByText('/work');
+      const fieldBodies = ['settings.workDir', 'settings.logDir'].map((label) => {
+        const fieldBody = getDirItem(label).querySelector<HTMLElement>('.aion-dir-input');
+        expect(fieldBody).not.toBeNull();
+        return fieldBody as HTMLElement;
+      });
+
+      await user.click(fieldBodies[0]);
+      await user.click(fieldBodies[1]);
+      for (const fieldBody of fieldBodies) {
+        fireEvent.keyDown(fieldBody, { key: 'Enter' });
+        fireEvent.keyDown(fieldBody, { key: ' ' });
+      }
+
+      expect(showOpenMock).not.toHaveBeenCalled();
+      expect(updateSystemInfoMock).not.toHaveBeenCalled();
+      expect(restartMock).not.toHaveBeenCalled();
+    });
+
+    it('does not make the read-only directory fields tab stops', async () => {
+      renderContent();
+
+      await screen.findByText('/work');
+      for (const label of ['settings.workDir', 'settings.logDir']) {
+        expect(getDirItem(label).querySelector('.aion-dir-input')).not.toHaveAttribute('tabindex');
+      }
+    });
+
+    it('explains that the directories are set at installation and shared by all users', async () => {
+      renderContent();
+
+      await screen.findByText('/work');
+      expect(screen.getByText('settings.sharedConfig.serverDirs')).toBeInTheDocument();
+    });
+
+    it('still shows the full path in a tooltip, since a long path is truncated in the field', async () => {
+      const user = userEvent.setup();
+      renderContent();
+
+      await user.hover(await screen.findByText('/work'));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('/work')).toHaveLength(2);
+      });
+    });
+
+    it('shows the placeholder for a directory the server did not report', async () => {
+      systemInfoMock.mockResolvedValue({ ...defaultSystemInfo, workDir: '', logDir: '/logs' });
+      renderContent();
+
+      await screen.findByText('/logs');
+      expect(within(getDirItem('settings.workDir')).getByText('settings.dirNotConfigured')).toBeInTheDocument();
     });
   });
 });
