@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.0.1](https://github.com/xsyk/AionUi/releases/tag/v1.0.1) (2026-10-10)
+
+Models, agents and the image generation model are now configured once by the administrator and shared by every user. Work and log directories default to /data/.AionEasiful, and the sign-in page puts Feishu first.
+
+### Desktop
+
+#### Features
+
+- **web-cli:** default work and log dirs to /data/.AionEasiful, chosen at install
+- **settings:** show shared models read-only to non-admin users
+- **settings:** show shared agents read-only to non-admin users
+- **tools:** make the image generation model a shared setting
+- **image:** support the OpenAI Images API for gpt-image and dall-e models
+- **settings:** show server directories read-only in the web UI
+- **login:** Feishu-first sign-in page with password and redirect views
+
+#### Bug Fixes
+
+- **web-cli:** never treat an unreadable install record as missing
+- **settings:** stop listing gpt-image and dall-e as unsupported image models
+- **tools:** surface load errors and stale image generation choices
+- **image:** only accept real image bytes from downloaded URLs
+- **web-cli:** load the shipped image generation MCP script as CommonJS
+- **login:** address review of the sign-in page
+
+### Core ([v1.0.1](https://github.com/xsyk/AionCore/releases/tag/v1.0.1))
+
+#### Features
+
+- **auth:** add a guard for shared configuration writes
+- **provider:** share model providers across all users
+- **provider:** only the administrator changes shared providers
+- **agent:** share custom agents and gate agent settings to the administrator
+- **settings:** store the image generation model as a shared setting
+- **conversation:** inject the shared image generation MCP into every session
+- **workspace:** keep recognizing temp workspaces under the previous root
+- notify Feishu of final conversation errors with agent identity
+
+#### Bug Fixes
+
+- **settings:** keep image generation off the session start path
+
 ## [1.0.0](https://github.com/xsyk/AionUi/releases/tag/v1.0.0) (2026-10-08)
 
 First AionEasiful release: a self-hosted WebUI with multi-user login (super admin, user management, Feishu sign-in), the AionEasiful name and logo.
