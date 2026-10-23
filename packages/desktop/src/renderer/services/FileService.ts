@@ -255,6 +255,10 @@ function sendProjectUpload(
     const formData = new FormData();
     formData.append('pe_id', target.pe_id);
     formData.append('relative_path', target.relative_path);
+    // The name as picked. Browsers percent-escape `"`, CR and LF in the file
+    // part's Content-Disposition filename and the backend reads that header raw,
+    // so without this field `报告"终版".pdf` would be stored as `报告%22终版%22.pdf`.
+    formData.append('file_name', file.name);
     formData.append('file', file);
 
     const xhr = new XMLHttpRequest();
@@ -358,10 +362,11 @@ function readProjectUploadReply(reply: ProjectUploadReply, file: File): ProjectU
  * conflict is not an error: the backend stores the file under a free name and
  * reports `renamed`.
  *
- * Field order is part of the contract: `pe_id` and `relative_path` must arrive
- * before `file`, because the backend resolves and checks the target directory
- * first and then streams the file straight into it — a `file` part that comes
- * first is rejected with 400.
+ * Field order is part of the contract: `pe_id`, `relative_path` and `file_name`
+ * must arrive before `file`, which comes last, because the backend resolves and
+ * checks the target directory first and then streams the file straight into it
+ * — a `file` part that comes first is rejected with 400. The backend takes the
+ * stored name from `file_name` when present.
  *
  * An expired session is handled like `httpRequest` does: a 401 triggers one
  * silent session refresh (a no-op outside the WebUI browser) and, if that

@@ -8,7 +8,9 @@
  * Contract tests for `uploadFileToProject` — the HTTP half of the Explorer's
  * "Upload files" (POST /api/fs/upload-to-project). The backend reads multipart
  * fields in arrival order and rejects a `file` part that arrives before `pe_id`
- * and `relative_path`, so the field order is part of the contract, not a detail.
+ * and `relative_path`, so the field order is part of the contract, not a detail;
+ * it also prefers the `file_name` field (sent just before the file) over the
+ * part header's filename, which browsers percent-escape.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -152,9 +154,9 @@ describe('uploadFileToProject request', () => {
     expect(lastXhr().url).toMatch(/\/api\/fs\/upload-to-project$/);
   });
 
-  it('appends pe_id and relative_path before the file part (the server rejects a file that comes first)', () => {
+  it('sends pe_id, relative_path and file_name ahead of the file part, which must come last', () => {
     void uploadFileToProject(file(), target);
-    expect(Array.from(sentForm().keys())).toEqual(['pe_id', 'relative_path', 'file']);
+    expect(Array.from(sentForm().keys())).toEqual(['pe_id', 'relative_path', 'file_name', 'file']);
   });
 
   it('carries the target entry, the target directory and the picked file', () => {
@@ -162,6 +164,11 @@ describe('uploadFileToProject request', () => {
     expect(sentForm().get('pe_id')).toBe('peA');
     expect(sentForm().get('relative_path')).toBe('docs');
     expect((sentForm().get('file') as File).name).toBe('report.pdf');
+  });
+
+  it('sends the picked name verbatim as file_name (browsers percent-escape `"`, CR and LF in the part header)', () => {
+    void uploadFileToProject(file('报告"终版".pdf'), target);
+    expect(sentForm().get('file_name')).toBe('报告"终版".pdf');
   });
 
   it('sends an empty relative_path for the entry root instead of dropping the field', () => {
@@ -271,11 +278,12 @@ describe('uploadFileToProject expired session (401)', () => {
 
   it('resends a freshly built body with the same fields in the same order', async () => {
     mocks.refreshSession.mockResolvedValue(true);
-    void uploadFileToProject(file(), target);
+    void uploadFileToProject(file('报告"终版".pdf'), target);
     xhrAt(0).respond(401, '');
     await requestCount(2);
     expect(formOf(xhrAt(1))).not.toBe(formOf(xhrAt(0)));
-    expect(Array.from(formOf(xhrAt(1)).keys())).toEqual(['pe_id', 'relative_path', 'file']);
+    expect(Array.from(formOf(xhrAt(1)).keys())).toEqual(['pe_id', 'relative_path', 'file_name', 'file']);
+    expect(formOf(xhrAt(1)).get('file_name')).toBe('报告"终版".pdf');
   });
 
   it('gives up as unauthorized when the resent upload is refused again — no third attempt', async () => {
