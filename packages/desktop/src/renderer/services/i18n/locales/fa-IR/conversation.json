@@ -645,6 +645,7 @@
       "addToChat": "افزودن به گفتگو",
       "copyRelativePath": "کپی کردن مسیر نسبی",
       "copyAbsolutePath": "کپی کردن مسیر مطلق",
+      "upload": "آپلود فایل‌ها",
       "newFile": "فایل جدید",
       "newDir": "پوشه جدید"
     },
@@ -661,6 +662,14 @@
     "imported": "{{count}} فایل وارد شد",
     "importPartialFailed": "{{copied}} کپی شد، {{failed}} ناموفق (تداخل نام یا پشتیبانی‌نشده)",
     "importFailed": "وارد کردن فایل‌ها ناموفق بود",
+    "uploading": "در حال آپلود {{current}}/{{total}}… {{percent}}٪",
+    "uploadBusy": "یک آپلود در حال انجام است، لطفاً صبر کنید",
+    "uploaded": "{{count}} فایل آپلود شد",
+    "uploadedRenamed": "{{count}} فایل آپلود شد؛ نام {{renamed}} مورد به‌دلیل تکراری بودن به‌طور خودکار تغییر کرد",
+    "uploadPartialFailed": "{{uploaded}} آپلود شد، {{failed}} ناموفق: {{names}}",
+    "uploadFailed": "آپلود ناموفق بود: {{names}}",
+    "uploadTooLarge": "{{name}} (بیش از 100 مگابایت)",
+    "uploadNamesMore": "{{names}} و موارد دیگر",
     "copyNodeFailed": "کپی ناموفق بود",
     "moveNodeFailed": "انتقال ناموفق بود",
     "search": {

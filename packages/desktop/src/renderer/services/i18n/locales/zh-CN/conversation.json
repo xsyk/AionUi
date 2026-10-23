@@ -645,6 +645,7 @@
       "addToChat": "添加到聊天",
       "copyRelativePath": "复制相对路径",
       "copyAbsolutePath": "复制绝对路径",
+      "upload": "上传文件",
       "newFile": "新建文件",
       "newDir": "新建目录"
     },
@@ -661,6 +662,14 @@
     "imported": "已导入 {{count}} 个文件",
     "importPartialFailed": "已复制 {{copied}} 个，{{failed}} 个失败（重名或不支持）",
     "importFailed": "导入文件失败",
+    "uploading": "正在上传 {{current}}/{{total}}… {{percent}}%",
+    "uploadBusy": "正在上传，请稍候",
+    "uploaded": "已上传 {{count}} 个文件",
+    "uploadedRenamed": "已上传 {{count}} 个文件，{{renamed}} 个因重名已自动改名",
+    "uploadPartialFailed": "已上传 {{uploaded}} 个，{{failed}} 个失败：{{names}}",
+    "uploadFailed": "上传失败：{{names}}",
+    "uploadTooLarge": "{{name}}（超过 100MB）",
+    "uploadNamesMore": "{{names}} 等",
     "copyNodeFailed": "复制失败",
     "moveNodeFailed": "移动失败",
     "search": {

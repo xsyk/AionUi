@@ -642,6 +642,7 @@
     "removeFailed": "Couldn't remove the folder",
     "contextMenu": {
       "rename": "Rename",
+      "upload": "Upload files",
       "newFile": "New file",
       "newDir": "New folder",
       "addToChat": "Add to chat",
@@ -661,6 +662,14 @@
     "imported": "Imported {{count}} file(s)",
     "importPartialFailed": "{{copied}} copied, {{failed}} failed (name conflicts or unsupported)",
     "importFailed": "Failed to import files",
+    "uploading": "Uploading {{current}}/{{total}}… {{percent}}%",
+    "uploadBusy": "An upload is already in progress. Please wait.",
+    "uploaded": "Uploaded {{count}} file(s)",
+    "uploadedRenamed": "Uploaded {{count}} file(s); {{renamed}} renamed to avoid a name conflict",
+    "uploadPartialFailed": "{{uploaded}} uploaded, {{failed}} failed: {{names}}",
+    "uploadFailed": "Upload failed: {{names}}",
+    "uploadTooLarge": "{{name}} (over 100 MB)",
+    "uploadNamesMore": "{{names}}, among others",
     "copyNodeFailed": "Failed to copy",
     "moveNodeFailed": "Failed to move",
     "search": {

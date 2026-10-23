@@ -648,6 +648,7 @@
     "removeFailed": "Couldn't remove the folder",
     "contextMenu": {
       "rename": "Renomear",
+      "upload": "Enviar arquivos",
       "newFile": "Novo arquivo",
       "newDir": "Nova pasta",
       "addToChat": "Adicionar ao chat",
@@ -667,6 +668,14 @@
     "imported": "{{count}} arquivo(s) importado(s)",
     "importPartialFailed": "{{copied}} copiado(s), {{failed}} com falha (conflitos de nome ou não suportados)",
     "importFailed": "Falha ao importar os arquivos",
+    "uploading": "Enviando {{current}}/{{total}}… {{percent}}%",
+    "uploadBusy": "Já há um envio em andamento. Aguarde.",
+    "uploaded": "{{count}} arquivo(s) enviado(s)",
+    "uploadedRenamed": "{{count}} arquivo(s) enviado(s); {{renamed}} renomeado(s) para evitar conflito de nomes",
+    "uploadPartialFailed": "{{uploaded}} enviado(s), {{failed}} com falha: {{names}}",
+    "uploadFailed": "Falha no envio: {{names}}",
+    "uploadTooLarge": "{{name}} (mais de 100 MB)",
+    "uploadNamesMore": "{{names}}, entre outros",
     "copyNodeFailed": "Falha ao copiar",
     "moveNodeFailed": "Falha ao mover",
     "search": {

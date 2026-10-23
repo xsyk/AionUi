@@ -647,6 +647,7 @@
       "addToChat": "Sohbete ekle",
       "copyRelativePath": "Göreli yolu kopyala",
       "copyAbsolutePath": "Mutlak yolu kopyala",
+      "upload": "Dosya yükle",
       "newFile": "Yeni dosya",
       "newDir": "Yeni klasör"
     },
@@ -663,6 +664,14 @@
     "imported": "{{count}} dosya içe aktarıldı",
     "importPartialFailed": "{{copied}} kopyalandı, {{failed}} başarısız (ad çakışması veya desteklenmiyor)",
     "importFailed": "Dosyalar içe aktarılamadı",
+    "uploading": "Yükleniyor {{current}}/{{total}}… %{{percent}}",
+    "uploadBusy": "Bir yükleme zaten sürüyor, lütfen bekleyin",
+    "uploaded": "{{count}} dosya yüklendi",
+    "uploadedRenamed": "{{count}} dosya yüklendi; ad çakışması nedeniyle {{renamed}} dosya otomatik olarak yeniden adlandırıldı",
+    "uploadPartialFailed": "{{uploaded}} yüklendi, {{failed}} başarısız: {{names}}",
+    "uploadFailed": "Yükleme başarısız: {{names}}",
+    "uploadTooLarge": "{{name}} (100 MB'tan büyük)",
+    "uploadNamesMore": "{{names}} vb.",
     "copyNodeFailed": "Kopyalanamadı",
     "moveNodeFailed": "Taşınamadı",
     "search": {

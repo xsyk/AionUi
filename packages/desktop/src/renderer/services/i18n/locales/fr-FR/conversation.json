@@ -641,6 +641,7 @@
     "attachFailed": "Couldn't add the folder",
     "removeFailed": "Couldn't remove the folder",
     "contextMenu": {
+      "upload": "Téléverser des fichiers",
       "newFile": "Nouveau fichier",
       "newDir": "Nouveau dossier",
       "rename": "Renommer",
@@ -661,6 +662,14 @@
     "imported": "{{count}} fichier(s) importé(s)",
     "importPartialFailed": "{{copied}} copié(s), {{failed}} échec(s) (conflits de noms ou non pris en charge)",
     "importFailed": "Échec de l’import des fichiers",
+    "uploading": "Téléversement {{current}}/{{total}}… {{percent}} %",
+    "uploadBusy": "Un téléversement est déjà en cours. Veuillez patienter.",
+    "uploaded": "{{count}} fichier(s) téléversé(s)",
+    "uploadedRenamed": "{{count}} fichier(s) téléversé(s) ; {{renamed}} renommé(s) pour éviter un conflit de noms",
+    "uploadPartialFailed": "{{uploaded}} téléversé(s), {{failed}} en échec : {{names}}",
+    "uploadFailed": "Échec du téléversement : {{names}}",
+    "uploadTooLarge": "{{name}} (plus de 100 Mo)",
+    "uploadNamesMore": "{{names}}, entre autres",
     "copyNodeFailed": "Échec de la copie",
     "moveNodeFailed": "Échec du déplacement",
     "search": {

@@ -61,6 +61,10 @@ export type ExplorerPanelProps = {
   /** Create a new sub-directory inside `dirRelativePath`. Same gating and dialog
    * flow as `onNewFile`. Omit to hide the item. */
   onNewDir?: (peId: string, dirRelativePath: string) => void;
+  /** Upload files the user picks (native chooser, multi-select) into the
+   * directory `dirRelativePath` (a pe root uses `''`). Offered on the same nodes
+   * as new-file / new-dir, on desktop and WebUI alike. Omit to hide the item. */
+  onUpload?: (peId: string, dirRelativePath: string) => void;
   /** Add a file/folder node to the active conversation's send box. Omit to hide
    * the item (e.g. no single active conversation, as on the team route). */
   onAddToChat?: (peId: string, relativePath: string, name: string, isFile: boolean) => void;
@@ -98,6 +102,7 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
   onDelete,
   onNewFile,
   onNewDir,
+  onUpload,
   onAddToChat,
   onRevealInFolder,
   onCopyRelativePath,
@@ -309,8 +314,8 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
       //  - Reveal-in-folder + copy-absolute-path are Electron-only: they need a
       //    local OS shell / resolve the absolute path backend-side, which must not
       //    be exposed to a remote WebUI.
-      //  - New-file / new-dir create inside a directory, so only on directory nodes
-      //    (a real dir or a pe root), never on a file leaf.
+      //  - Upload / new-file / new-dir put something inside a directory, so only on
+      //    directory nodes (a real dir or a pe root), never on a file leaf.
       //  - Rename / delete are for non-root entries; a pe root instead offers
       //    remove-from-project (disabled for the immutable workspace root).
       // If no action is enabled the node renders its bare title (no dropdown).
@@ -322,6 +327,7 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
         revealInFolder: canReveal,
         copyRelativePath: Boolean(onCopyRelativePath),
         copyAbsolutePath: canCopyAbsolutePath,
+        upload: !isFile && Boolean(onUpload),
         newFile: !isFile && Boolean(onNewFile),
         newDir: !isFile && Boolean(onNewDir),
         rename: !isRoot && Boolean(onRename),
@@ -345,6 +351,7 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
       const onClickMenuItem = (menuKey: string, event: { stopPropagation?: () => void }) => {
         event?.stopPropagation?.();
         if (menuKey === 'addToChat') onAddToChat?.(peId, rel, name, isFile);
+        else if (menuKey === 'upload') onUpload?.(peId, rel);
         else if (menuKey === 'newFile') onNewFile?.(peId, rel);
         else if (menuKey === 'newDir') onNewDir?.(peId, rel);
         else if (menuKey === 'rename') onRename?.(peId, rel, name);
@@ -369,6 +376,8 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
             return (
               <Menu.Item key='copyAbsolutePath'>{t('conversation.explorer.contextMenu.copyAbsolutePath')}</Menu.Item>
             );
+          case 'upload':
+            return <Menu.Item key='upload'>{t('conversation.explorer.contextMenu.upload')}</Menu.Item>;
           case 'newFile':
             return <Menu.Item key='newFile'>{t('conversation.explorer.contextMenu.newFile')}</Menu.Item>;
           case 'newDir':
@@ -440,6 +449,7 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
       onDelete,
       onNewFile,
       onNewDir,
+      onUpload,
       onAddToChat,
       onImportFiles,
       onTransfer,

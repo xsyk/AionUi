@@ -645,6 +645,7 @@
       "addToChat": "채팅에 추가",
       "copyRelativePath": "상대 경로 복사",
       "copyAbsolutePath": "절대 경로 복사",
+      "upload": "파일 업로드",
       "newFile": "새 파일",
       "newDir": "새 폴더"
     },
@@ -661,6 +662,14 @@
     "imported": "{{count}}개 파일을 가져왔습니다",
     "importPartialFailed": "{{copied}}개 복사, {{failed}}개 실패(이름 충돌 또는 미지원)",
     "importFailed": "파일 가져오기에 실패했습니다",
+    "uploading": "업로드 중 {{current}}/{{total}}… {{percent}}%",
+    "uploadBusy": "이미 업로드 중입니다. 잠시 기다려 주세요",
+    "uploaded": "{{count}}개 파일을 업로드했습니다",
+    "uploadedRenamed": "{{count}}개 파일을 업로드했습니다. {{renamed}}개는 이름이 겹쳐 자동으로 이름을 바꿨습니다",
+    "uploadPartialFailed": "{{uploaded}}개 업로드, {{failed}}개 실패: {{names}}",
+    "uploadFailed": "업로드 실패: {{names}}",
+    "uploadTooLarge": "{{name}}(100MB 초과)",
+    "uploadNamesMore": "{{names}} 등",
     "copyNodeFailed": "복사에 실패했습니다",
     "moveNodeFailed": "이동에 실패했습니다",
     "search": {

@@ -18,7 +18,7 @@
 
 import { Button, Input, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
 import { FoldUpOne, FolderPlus, Refresh } from '@icon-park/react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -40,6 +40,8 @@ import { projectFileRef } from '@/common/types/chatFile';
 import type { ChatFileRef } from '@/common/types/chatFile';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 import { resolvePreviewPayload } from '@/renderer/utils/file/previewPayload';
+import { PROJECT_UPLOAD_MAX_BYTES, uploadFileToProject } from '@/renderer/services/FileService';
+import { formatNameList } from '@/renderer/services/i18n/list';
 
 import { ExplorerPanel } from './ExplorerPanel';
 import {
@@ -51,6 +53,7 @@ import {
   joinRel,
   parentRel,
   peKey,
+  type DirRef,
   type DragPeRef,
   type RenameRequest,
   type TransferOp,
@@ -103,6 +106,26 @@ const nameDialogErrorKey = (mode: NameDialogState['mode']): string =>
     : mode === 'newFile'
       ? 'conversation.explorer.newFileFailed'
       : 'conversation.explorer.newDirFailed';
+
+/** Fixed id of an upload batch's one toast: progress while it runs, then the summary. */
+const UPLOAD_TOAST_ID = 'explorer-upload';
+
+/** How many failed file names the upload summary lists before "and more". */
+const UPLOAD_SUMMARY_MAX_NAMES = 3;
+
+/**
+ * Whether an upload batch is running. App-wide on purpose: the toast has one
+ * fixed id, and this container can be mounted more than once (panel host, mobile
+ * overlay, a remount on project switch), so a per-instance flag could not keep
+ * two batches from writing over each other's toast.
+ */
+let uploadBatchRunning = false;
+
+/** How one picked file of an upload batch ended. */
+type UploadOutcome = {
+  name: string;
+  status: 'uploaded' | 'renamed' | 'tooLarge' | 'failed';
+};
 
 /** Args passed to `openPreview` for an Explorer-opened file. */
 export type ExplorerPreviewPayload = {
@@ -174,7 +197,7 @@ export const buildExplorerPreviewPayload = async (
 };
 
 export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { openPreview } = usePreviewContext();
   const activeConversationId = useCurrentConversation();
   const { data, isLoading, mutate } = useSWR(projectId ? `explorer-project/${projectId}` : null, (key: string) => {
@@ -262,6 +285,9 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
   const [nameDialog, setNameDialog] = useState<NameDialogState | null>(null);
   const [nameValue, setNameValue] = useState('');
   const [nameSubmitting, setNameSubmitting] = useState(false);
+  // Upload files: the hidden picker, and the directory the menu was opened on.
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<DirRef | null>(null);
 
   const handleRename = (peId: string, rel: string, name: string): void => {
     setNameDialog({ mode: 'rename', peId, targetDir: parentRel(rel), origRel: rel });
@@ -458,6 +484,110 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
     }
   };
 
+  // Upload files: the menu action remembers the directory and opens the hidden
+  // multi-select picker (FileAttachButton's approach — the same on desktop and
+  // WebUI). The picked files go up one at a time over /api/fs/upload-to-project;
+  // they reach the tree through the directory's WS subscription like any other
+  // change, so the only tree work here is revealing (expanding) the directory.
+
+  // One summary per batch, put in place of the progress toast (same id): Arco
+  // swaps the content and type and restarts the auto-close timer, so no
+  // "uploading…" toast is left behind and the two never overlap.
+  const showUploadSummary = (outcomes: UploadOutcome[]): void => {
+    const uploaded = outcomes.filter((o) => o.status === 'uploaded' || o.status === 'renamed').length;
+    const renamed = outcomes.filter((o) => o.status === 'renamed').length;
+    const failed = outcomes.filter((o) => o.status === 'tooLarge' || o.status === 'failed');
+    if (failed.length === 0) {
+      const content =
+        renamed > 0
+          ? t('conversation.explorer.uploadedRenamed', { count: uploaded, renamed })
+          : t('conversation.explorer.uploaded', { count: uploaded });
+      Message.success({ id: UPLOAD_TOAST_ID, content });
+      return;
+    }
+    const labels = failed
+      .slice(0, UPLOAD_SUMMARY_MAX_NAMES)
+      .map((o) => (o.status === 'tooLarge' ? t('conversation.explorer.uploadTooLarge', { name: o.name }) : o.name));
+    const listed = formatNameList(labels, i18n.language);
+    const names =
+      failed.length > UPLOAD_SUMMARY_MAX_NAMES ? t('conversation.explorer.uploadNamesMore', { names: listed }) : listed;
+    if (uploaded === 0) {
+      Message.error({ id: UPLOAD_TOAST_ID, content: t('conversation.explorer.uploadFailed', { names }) });
+    } else {
+      Message.warning({
+        id: UPLOAD_TOAST_ID,
+        content: t('conversation.explorer.uploadPartialFailed', { uploaded, failed: failed.length, names }),
+      });
+    }
+  };
+
+  const uploadBatch = async (target: DirRef, files: File[]): Promise<void> => {
+    if (uploadBatchRunning) {
+      Message.info(t('conversation.explorer.uploadBusy'));
+      return;
+    }
+    uploadBatchRunning = true;
+    const outcomes: UploadOutcome[] = [];
+    try {
+      const total = files.filter((file) => file.size <= PROJECT_UPLOAD_MAX_BYTES).length;
+      let current = 0;
+      for (const file of files) {
+        // Over the server's per-file ceiling: skip it instead of streaming it all
+        // only to be refused with 413 at the end.
+        if (file.size > PROJECT_UPLOAD_MAX_BYTES) {
+          outcomes.push({ name: file.name, status: 'tooLarge' });
+          continue;
+        }
+        current += 1;
+        const position = current;
+        let shownPercent = -1;
+        const showProgress = (percent: number): void => {
+          if (percent === shownPercent) return; // XHR progress fires far more often than the % changes
+          shownPercent = percent;
+          Message.loading({
+            id: UPLOAD_TOAST_ID,
+            content: t('conversation.explorer.uploading', { current: position, total, percent }),
+            duration: 0,
+          });
+        };
+        showProgress(0);
+        try {
+          // Sequential on purpose: one file on the wire at a time keeps the single
+          // "n/m" toast truthful and never competes with itself for bandwidth.
+          // eslint-disable-next-line no-await-in-loop
+          const stored = await uploadFileToProject(file, target, showProgress);
+          outcomes.push({ name: file.name, status: stored.renamed ? 'renamed' : 'uploaded' });
+        } catch (error) {
+          const tooLarge = error instanceof Error && error.message === 'FILE_TOO_LARGE';
+          if (!tooLarge) console.warn('[ExplorerContainer] upload failed:', file.name, error);
+          outcomes.push({ name: file.name, status: tooLarge ? 'tooLarge' : 'failed' });
+        }
+      }
+    } finally {
+      uploadBatchRunning = false;
+    }
+    showUploadSummary(outcomes);
+    if (outcomes.some((o) => o.status === 'uploaded' || o.status === 'renamed')) reveal(target);
+  };
+
+  const handleUploadPicked = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(event.target.files ?? []);
+    // Clear the input, or picking the very same files next time fires no `change`.
+    event.target.value = '';
+    const target = uploadTargetRef.current;
+    uploadTargetRef.current = null;
+    if (target && files.length > 0) void uploadBatch(target, files);
+  };
+
+  const handleUpload = (peId: string, dirRel: string): void => {
+    if (uploadBatchRunning) {
+      Message.info(t('conversation.explorer.uploadBusy'));
+      return;
+    }
+    uploadTargetRef.current = { pe_id: peId, relative_path: dirRel };
+    uploadInputRef.current?.click();
+  };
+
   if (!projectId) return null;
   // Spin only while the CURRENT project's detail is still loading. A stale value
   // for a different project (detail undefined) falls through to empty roots, not
@@ -633,6 +763,7 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
             onDelete={handleDelete}
             onNewFile={handleNewFile}
             onNewDir={handleNewDir}
+            onUpload={handleUpload}
             onAddToChat={activeConversationId ? handleAddToChat : undefined}
             onRevealInFolder={handleRevealInFolder}
             onCopyRelativePath={handleCopyRelativePath}
@@ -647,6 +778,17 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           <ScmPanel projectId={projectId} />
         </div>
       )}
+      {/* The native file chooser behind "Upload files" (as in FileAttachButton): a
+          menu item can open it, while Arco's Upload exposes no way to open its
+          chooser from elsewhere. It is never shown, so it adds no visible control. */}
+      <input
+        ref={uploadInputRef}
+        type='file'
+        multiple
+        className='hidden'
+        data-testid='explorer-upload-input'
+        onChange={handleUploadPicked}
+      />
       <Modal
         title={nameDialog ? t(nameDialogTitleKey(nameDialog.mode)) : ''}
         visible={nameDialog !== null}

@@ -646,6 +646,7 @@
       "addToChat": "Añadir al chat",
       "copyRelativePath": "Copiar ruta relativa",
       "copyAbsolutePath": "Copiar ruta absoluta",
+      "upload": "Subir archivos",
       "newFile": "Nuevo archivo",
       "newDir": "Nueva carpeta"
     },
@@ -662,6 +663,14 @@
     "imported": "{{count}} archivo(s) importado(s)",
     "importPartialFailed": "{{copied}} copiado(s), {{failed}} con error (conflictos de nombre o no admitidos)",
     "importFailed": "Error al importar los archivos",
+    "uploading": "Subiendo {{current}}/{{total}}… {{percent}} %",
+    "uploadBusy": "Ya hay una subida en curso. Espera un momento.",
+    "uploaded": "{{count}} archivo(s) subido(s)",
+    "uploadedRenamed": "{{count}} archivo(s) subido(s); {{renamed}} renombrado(s) para evitar un conflicto de nombres",
+    "uploadPartialFailed": "{{uploaded}} subido(s), {{failed}} con error: {{names}}",
+    "uploadFailed": "Error al subir: {{names}}",
+    "uploadTooLarge": "{{name}} (más de 100 MB)",
+    "uploadNamesMore": "{{names}}, entre otros",
     "copyNodeFailed": "Error al copiar",
     "moveNodeFailed": "Error al mover",
     "search": {

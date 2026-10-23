@@ -645,6 +645,7 @@ describe('explorerContextMenuSections — grouped, ordered, divider-ready sectio
     revealInFolder: false,
     copyRelativePath: false,
     copyAbsolutePath: false,
+    upload: false,
     newFile: false,
     newDir: false,
     rename: false,
@@ -744,10 +745,12 @@ describe('explorerContextMenuSections — grouped, ordered, divider-ready sectio
     expect(explorerContextMenuSections(caps({ rename: true, delete: true }))).toEqual([['rename', 'delete']]);
   });
 
-  it('section 3 preserves the exact newFile → newDir → rename → delete → remove order', () => {
+  it('section 3 preserves the exact upload → newFile → newDir → rename → delete → remove order', () => {
     expect(
-      explorerContextMenuSections(caps({ newFile: true, newDir: true, rename: true, delete: true, remove: true }))
-    ).toEqual([['newFile', 'newDir', 'rename', 'delete', 'remove']]);
+      explorerContextMenuSections(
+        caps({ upload: true, newFile: true, newDir: true, rename: true, delete: true, remove: true })
+      )
+    ).toEqual([['upload', 'newFile', 'newDir', 'rename', 'delete', 'remove']]);
   });
 
   it('never returns an empty section, so dividers only ever fall between real sections', () => {

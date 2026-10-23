@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { getBaseUrl } from '@/common/adapter/httpBridge';
+import { ACT_AS_HEADER, getActAsUser, getBaseUrl, shouldAttachActAs } from '@/common/adapter/httpBridge';
 import { trackUpload, type UploadSource } from '@/renderer/hooks/file/useUploadState';
 
 /** Sentinel error message used when an upload is cancelled by the caller. */
@@ -102,6 +102,168 @@ export async function uploadFileViaHttp(
         } else {
           resolve(result.data);
         }
+      } catch {
+        reject(new Error('Upload failed: invalid server response'));
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      detachSignal();
+      reject(new Error('Upload failed: network error'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      detachSignal();
+      reject(new Error(UPLOAD_ABORTED_ERROR));
+    });
+
+    xhr.send(formData);
+  });
+}
+
+/**
+ * Per-file ceiling of {@link uploadFileToProject}: the backend's
+ * `PROJECT_UPLOAD_MAX_SIZE` (100 MiB). The server answers anything larger with
+ * 413, so callers skip such files up front rather than stream them only to be
+ * refused at the end.
+ */
+export const PROJECT_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+
+/** The directory an upload lands in: a folder inside a project entry. */
+export type ProjectUploadTarget = {
+  /** Project entry id (the file-tree node's `pe_id`). */
+  pe_id: string;
+  /** Directory relative to the entry root, `/`-separated; `''` is the root itself. */
+  relative_path: string;
+};
+
+/** The stored file, as reported by `POST /api/fs/upload-to-project`. */
+export type ProjectUploadResult = {
+  /** Final file name; differs from the picked one when `renamed`. */
+  name: string;
+  /** Path relative to the entry root, `/`-separated. */
+  relative_path: string;
+  /** Bytes written. */
+  size: number;
+  /** True when the name was taken and the backend stored the file under a free one. */
+  renamed: boolean;
+};
+
+const PROJECT_UPLOAD_PATH = '/api/fs/upload-to-project';
+
+/** Human-readable text from a JSON error body (`error`, then `msg` / `message`), if it has any. */
+function readServerErrorText(responseText: string): string | null {
+  try {
+    const body: unknown = JSON.parse(responseText);
+    if (body && typeof body === 'object') {
+      for (const key of ['error', 'msg', 'message']) {
+        const value = (body as Record<string, unknown>)[key];
+        if (typeof value === 'string' && value.trim()) return value.trim();
+      }
+    }
+  } catch {
+    // Not JSON (e.g. a reverse proxy's HTML error page): the caller falls back to the status.
+  }
+  return null;
+}
+
+/**
+ * Upload one file into a directory of a project entry (the Explorer's
+ * "Upload files") via `POST /api/fs/upload-to-project` (multipart). A name
+ * conflict is not an error: the backend stores the file under a free name and
+ * reports `renamed`.
+ *
+ * Field order is part of the contract: `pe_id` and `relative_path` must arrive
+ * before `file`, because the backend resolves and checks the target directory
+ * first and then streams the file straight into it — a `file` part that comes
+ * first is rejected with 400.
+ *
+ * Rejects with `FILE_TOO_LARGE` on 413, {@link UPLOAD_ABORTED_ERROR} when the
+ * signal aborts, and otherwise with an Error carrying the server's `error` /
+ * `msg` text when the response has one (else the HTTP status).
+ *
+ * @param target     Entry + directory to upload into.
+ * @param onProgress Optional callback receiving upload percentage (0-100).
+ * @param options    Optional bag — supports an `AbortSignal` to cancel.
+ */
+export function uploadFileToProject(
+  file: File,
+  target: ProjectUploadTarget,
+  onProgress?: (percent: number) => void,
+  options?: UploadFileOptions
+): Promise<ProjectUploadResult> {
+  const formData = new FormData();
+  formData.append('pe_id', target.pe_id);
+  formData.append('relative_path', target.relative_path);
+  formData.append('file', file);
+
+  return new Promise<ProjectUploadResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${getBaseUrl()}${PROJECT_UPLOAD_PATH}`);
+
+    // Same identity as the other /api/fs calls, which go through httpRequest:
+    // while the super admin acts as another user, the entry belongs to that user.
+    const actAs = getActAsUser();
+    if (actAs && shouldAttachActAs(PROJECT_UPLOAD_PATH)) {
+      xhr.setRequestHeader(ACT_AS_HEADER, actAs);
+    }
+
+    const signal = options?.signal;
+    let onSignalAbort: (() => void) | null = null;
+    if (signal) {
+      if (signal.aborted) {
+        reject(new Error(UPLOAD_ABORTED_ERROR));
+        return;
+      }
+      onSignalAbort = () => {
+        try {
+          xhr.abort();
+        } catch {
+          /* ignore */
+        }
+      };
+      signal.addEventListener('abort', onSignalAbort);
+    }
+
+    const detachSignal = (): void => {
+      if (signal && onSignalAbort) {
+        signal.removeEventListener('abort', onSignalAbort);
+        onSignalAbort = null;
+      }
+    };
+
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      });
+    }
+
+    xhr.addEventListener('load', () => {
+      detachSignal();
+      if (xhr.status === 413) {
+        reject(new Error('FILE_TOO_LARGE'));
+        return;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const statusLine = `Upload failed: ${xhr.status} ${xhr.statusText}`.trim();
+        reject(new Error(readServerErrorText(xhr.responseText) ?? statusLine));
+        return;
+      }
+      try {
+        const result = JSON.parse(xhr.responseText) as { success?: boolean; data?: Partial<ProjectUploadResult> };
+        const data = result?.data;
+        if (!result?.success || !data || typeof data.name !== 'string' || typeof data.relative_path !== 'string') {
+          reject(new Error('Upload failed: server returned unsuccessful response'));
+          return;
+        }
+        resolve({
+          name: data.name,
+          relative_path: data.relative_path,
+          size: typeof data.size === 'number' ? data.size : file.size,
+          renamed: data.renamed === true,
+        });
       } catch {
         reject(new Error('Upload failed: invalid server response'));
       }

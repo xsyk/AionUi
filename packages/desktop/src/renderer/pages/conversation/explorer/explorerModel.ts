@@ -559,6 +559,7 @@ export type ExplorerMenuItemKey =
   | 'revealInFolder'
   | 'copyRelativePath'
   | 'copyAbsolutePath'
+  | 'upload'
   | 'newFile'
   | 'newDir'
   | 'rename'
@@ -572,7 +573,7 @@ export type ExplorerMenuCaps = Record<ExplorerMenuItemKey, boolean>;
  * The context menu grouped into ordered sections:
  *   1. add-to-chat
  *   2. read-only utilities (open location, copy relative, copy absolute)
- *   3. mutate (new file, new dir, rename, delete, remove-from-project)
+ *   3. mutate (upload files, new file, new dir, rename, delete, remove-from-project)
  * Only enabled items appear, and only
  * non-empty sections are returned — so the caller draws a divider simply between
  * adjacent returned sections, and the "only between two non-empty sections, never
@@ -583,7 +584,7 @@ export function explorerContextMenuSections(caps: ExplorerMenuCaps): ExplorerMen
   const sections: ExplorerMenuItemKey[][] = [
     ['addToChat'],
     ['revealInFolder', 'copyRelativePath', 'copyAbsolutePath'],
-    ['newFile', 'newDir', 'rename', 'delete', 'remove'],
+    ['upload', 'newFile', 'newDir', 'rename', 'delete', 'remove'],
   ];
   return sections.map((keys) => keys.filter((key) => caps[key])).filter((keys) => keys.length > 0);
 }

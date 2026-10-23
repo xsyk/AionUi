@@ -653,6 +653,7 @@
       "addToChat": "Добавить в чат",
       "copyRelativePath": "Копировать относительный путь",
       "copyAbsolutePath": "Копировать абсолютный путь",
+      "upload": "Загрузить файлы",
       "newFile": "Новый файл",
       "newDir": "Новая папка"
     },
@@ -669,6 +670,14 @@
     "imported": "Импортировано файлов: {{count}}",
     "importPartialFailed": "Скопировано: {{copied}}, с ошибкой: {{failed}} (конфликты имён или не поддерживается)",
     "importFailed": "Не удалось импортировать файлы",
+    "uploading": "Загрузка {{current}}/{{total}}… {{percent}}%",
+    "uploadBusy": "Загрузка уже идёт, подождите",
+    "uploaded": "Загружено файлов: {{count}}",
+    "uploadedRenamed": "Загружено файлов: {{count}}; переименовано из-за совпадения имён: {{renamed}}",
+    "uploadPartialFailed": "Загружено: {{uploaded}}, с ошибкой: {{failed}} — {{names}}",
+    "uploadFailed": "Не удалось загрузить: {{names}}",
+    "uploadTooLarge": "{{name}} (больше 100 МБ)",
+    "uploadNamesMore": "{{names}}, а также другие",
     "copyNodeFailed": "Не удалось скопировать",
     "moveNodeFailed": "Не удалось переместить",
     "search": {

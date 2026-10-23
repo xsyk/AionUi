@@ -646,6 +646,7 @@
       "addToChat": "Zum Chat hinzufügen",
       "copyRelativePath": "Relativen Pfad kopieren",
       "copyAbsolutePath": "Absoluten Pfad kopieren",
+      "upload": "Dateien hochladen",
       "newFile": "Neue Datei",
       "newDir": "Neuer Ordner"
     },
@@ -662,6 +663,14 @@
     "imported": "{{count}} Datei(en) importiert",
     "importPartialFailed": "{{copied}} kopiert, {{failed}} fehlgeschlagen (Namenskonflikte oder nicht unterstützt)",
     "importFailed": "Import der Dateien fehlgeschlagen",
+    "uploading": "Wird hochgeladen: {{current}}/{{total}}… {{percent}} %",
+    "uploadBusy": "Es läuft bereits ein Upload. Bitte warten.",
+    "uploaded": "{{count}} Datei(en) hochgeladen",
+    "uploadedRenamed": "{{count}} Datei(en) hochgeladen; {{renamed}} wegen Namenskonflikt automatisch umbenannt",
+    "uploadPartialFailed": "{{uploaded}} hochgeladen, {{failed}} fehlgeschlagen: {{names}}",
+    "uploadFailed": "Hochladen fehlgeschlagen: {{names}}",
+    "uploadTooLarge": "{{name}} (über 100 MB)",
+    "uploadNamesMore": "{{names}} u. a.",
     "copyNodeFailed": "Kopieren fehlgeschlagen",
     "moveNodeFailed": "Verschieben fehlgeschlagen",
     "search": {
