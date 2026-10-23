@@ -40,7 +40,12 @@ import { projectFileRef } from '@/common/types/chatFile';
 import type { ChatFileRef } from '@/common/types/chatFile';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 import { resolvePreviewPayload } from '@/renderer/utils/file/previewPayload';
-import { PROJECT_UPLOAD_MAX_BYTES, uploadFileToProject } from '@/renderer/services/FileService';
+import {
+  PROJECT_UPLOAD_MAX_BYTES,
+  projectUploadFailureOf,
+  uploadFileToProject,
+  type ProjectUploadFailure,
+} from '@/renderer/services/FileService';
 import { formatNameList } from '@/renderer/services/i18n/list';
 
 import { ExplorerPanel } from './ExplorerPanel';
@@ -60,7 +65,7 @@ import {
 } from './explorerModel';
 import { initExplorerRuntime } from './monitorTransport';
 import { toRootRefs } from './projectRoots';
-import { collapseAll, refreshRoot, reveal, select } from './explorerStore';
+import { collapseAll, getExplorerSnapshot, refreshRoot, reveal, select } from './explorerStore';
 import { useCurrentConversation } from './currentConversationStore';
 import { SearchPanel } from './search/SearchPanel';
 import type { SearchHit } from './search/searchModel';
@@ -121,10 +126,25 @@ const UPLOAD_SUMMARY_MAX_NAMES = 3;
  */
 let uploadBatchRunning = false;
 
+/** Why a file did not get uploaded (the helper's `aborted` becomes the `cancelled` status). */
+type UploadFailureReason = Exclude<ProjectUploadFailure, 'aborted'>;
+
 /** How one picked file of an upload batch ended. */
 type UploadOutcome = {
   name: string;
-  status: 'uploaded' | 'renamed' | 'tooLarge' | 'failed';
+  status: 'uploaded' | 'renamed' | 'failed' | 'cancelled';
+  /** Set when `status` is 'failed'. */
+  reason?: UploadFailureReason;
+};
+
+/** The short reason shown after a failed file's name in the summary. */
+const UPLOAD_REASON_KEY: Record<UploadFailureReason, string> = {
+  tooLarge: 'conversation.explorer.uploadReason.tooLarge',
+  unauthorized: 'conversation.explorer.uploadReason.unauthorized',
+  forbidden: 'conversation.explorer.uploadReason.forbidden',
+  badRequest: 'conversation.explorer.uploadReason.badRequest',
+  network: 'conversation.explorer.uploadReason.network',
+  server: 'conversation.explorer.uploadReason.server',
 };
 
 /** Args passed to `openPreview` for an Explorer-opened file. */
@@ -496,7 +516,16 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
   const showUploadSummary = (outcomes: UploadOutcome[]): void => {
     const uploaded = outcomes.filter((o) => o.status === 'uploaded' || o.status === 'renamed').length;
     const renamed = outcomes.filter((o) => o.status === 'renamed').length;
-    const failed = outcomes.filter((o) => o.status === 'tooLarge' || o.status === 'failed');
+    // Cancelled by the user: say how far it got. Itemising what was not sent
+    // would mostly list the very files the user chose to stop.
+    if (outcomes.some((o) => o.status === 'cancelled')) {
+      Message.info({
+        id: UPLOAD_TOAST_ID,
+        content: t('conversation.explorer.uploadCancelled', { uploaded, skipped: outcomes.length - uploaded }),
+      });
+      return;
+    }
+    const failed = outcomes.filter((o) => o.status === 'failed');
     if (failed.length === 0) {
       const content =
         renamed > 0
@@ -505,20 +534,22 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
       Message.success({ id: UPLOAD_TOAST_ID, content });
       return;
     }
-    const labels = failed
-      .slice(0, UPLOAD_SUMMARY_MAX_NAMES)
-      .map((o) => (o.status === 'tooLarge' ? t('conversation.explorer.uploadTooLarge', { name: o.name }) : o.name));
-    const listed = formatNameList(labels, i18n.language);
+    const failedLabel = (o: UploadOutcome): string => {
+      const reason = t(UPLOAD_REASON_KEY[o.reason ?? 'server']);
+      return t('conversation.explorer.uploadFailedItem', { name: o.name, reason });
+    };
+    const listed = formatNameList(failed.slice(0, UPLOAD_SUMMARY_MAX_NAMES).map(failedLabel), i18n.language);
     const names =
       failed.length > UPLOAD_SUMMARY_MAX_NAMES ? t('conversation.explorer.uploadNamesMore', { names: listed }) : listed;
     if (uploaded === 0) {
       Message.error({ id: UPLOAD_TOAST_ID, content: t('conversation.explorer.uploadFailed', { names }) });
-    } else {
-      Message.warning({
-        id: UPLOAD_TOAST_ID,
-        content: t('conversation.explorer.uploadPartialFailed', { uploaded, failed: failed.length, names }),
-      });
+      return;
     }
+    const content =
+      renamed > 0
+        ? t('conversation.explorer.uploadPartialFailedRenamed', { uploaded, renamed, failed: failed.length, names })
+        : t('conversation.explorer.uploadPartialFailed', { uploaded, failed: failed.length, names });
+    Message.warning({ id: UPLOAD_TOAST_ID, content });
   };
 
   const uploadBatch = async (target: DirRef, files: File[]): Promise<void> => {
@@ -527,15 +558,21 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
       return;
     }
     uploadBatchRunning = true;
+    // The toast's cancel button: aborts the file in flight; the rest are never sent.
+    const cancel = new AbortController();
     const outcomes: UploadOutcome[] = [];
     try {
       const total = files.filter((file) => file.size <= PROJECT_UPLOAD_MAX_BYTES).length;
       let current = 0;
       for (const file of files) {
+        if (cancel.signal.aborted) {
+          outcomes.push({ name: file.name, status: 'cancelled' });
+          continue;
+        }
         // Over the server's per-file ceiling: skip it instead of streaming it all
         // only to be refused with 413 at the end.
         if (file.size > PROJECT_UPLOAD_MAX_BYTES) {
-          outcomes.push({ name: file.name, status: 'tooLarge' });
+          outcomes.push({ name: file.name, status: 'failed', reason: 'tooLarge' });
           continue;
         }
         current += 1;
@@ -546,8 +583,15 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           shownPercent = percent;
           Message.loading({
             id: UPLOAD_TOAST_ID,
-            content: t('conversation.explorer.uploading', { current: position, total, percent }),
             duration: 0,
+            content: (
+              <span className='inline-flex items-center gap-8px'>
+                {t('conversation.explorer.uploading', { current: position, total, percent })}
+                <Button type='text' size='mini' onClick={() => cancel.abort()}>
+                  {t('common.cancel')}
+                </Button>
+              </span>
+            ),
           });
         };
         showProgress(0);
@@ -555,19 +599,32 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           // Sequential on purpose: one file on the wire at a time keeps the single
           // "n/m" toast truthful and never competes with itself for bandwidth.
           // eslint-disable-next-line no-await-in-loop
-          const stored = await uploadFileToProject(file, target, showProgress);
+          const stored = await uploadFileToProject(file, target, showProgress, { signal: cancel.signal });
           outcomes.push({ name: file.name, status: stored.renamed ? 'renamed' : 'uploaded' });
         } catch (error) {
-          const tooLarge = error instanceof Error && error.message === 'FILE_TOO_LARGE';
-          if (!tooLarge) console.warn('[ExplorerContainer] upload failed:', file.name, error);
-          outcomes.push({ name: file.name, status: tooLarge ? 'tooLarge' : 'failed' });
+          const failure = projectUploadFailureOf(error);
+          if (failure === 'aborted') {
+            outcomes.push({ name: file.name, status: 'cancelled' });
+          } else {
+            if (failure !== 'tooLarge') console.warn('[ExplorerContainer] upload failed:', file.name, error);
+            outcomes.push({ name: file.name, status: 'failed', reason: failure });
+          }
         }
       }
     } finally {
+      // Always release the batch and replace the duration-0 progress toast, even if
+      // the loop broke off unexpectedly — the files it never reached count as failed.
       uploadBatchRunning = false;
+      for (const file of files.slice(outcomes.length)) {
+        outcomes.push({ name: file.name, status: 'failed', reason: 'server' });
+      }
+      showUploadSummary(outcomes);
     }
-    showUploadSummary(outcomes);
-    if (outcomes.some((o) => o.status === 'uploaded' || o.status === 'renamed')) reveal(target);
+    // Reveal only while the tree still shows that root: the project may have been
+    // switched (or the folder removed) mid-batch, and revealing then would expand —
+    // and subscribe to — a directory of a tree that is no longer on screen.
+    const rootShown = getExplorerSnapshot().treeData.some((node) => node.key === peKey(target.pe_id, ''));
+    if (rootShown && outcomes.some((o) => o.status === 'uploaded' || o.status === 'renamed')) reveal(target);
   };
 
   const handleUploadPicked = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -576,7 +633,11 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
     event.target.value = '';
     const target = uploadTargetRef.current;
     uploadTargetRef.current = null;
-    if (target && files.length > 0) void uploadBatch(target, files);
+    if (target && files.length > 0) {
+      uploadBatch(target, files).catch((error: unknown) => {
+        console.error('[ExplorerContainer] upload batch broke off:', error);
+      });
+    }
   };
 
   const handleUpload = (peId: string, dirRel: string): void => {

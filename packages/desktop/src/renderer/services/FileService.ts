@@ -5,6 +5,7 @@
  */
 
 import { ACT_AS_HEADER, getActAsUser, getBaseUrl, shouldAttachActAs } from '@/common/adapter/httpBridge';
+import { refreshSession } from '@/common/adapter/sessionRefresh';
 import { trackUpload, type UploadSource } from '@/renderer/hooks/file/useUploadState';
 
 /** Sentinel error message used when an upload is cancelled by the caller. */
@@ -129,6 +130,15 @@ export async function uploadFileViaHttp(
  */
 export const PROJECT_UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
 
+/**
+ * How long an upload may go without any sign of life (request bytes leaving, the
+ * request finishing, response bytes arriving) before it counts as stalled and is
+ * aborted. A watchdog, not a total deadline: `xhr.timeout` caps the whole
+ * request, which a large file on a slow but healthy link would legitimately
+ * exceed.
+ */
+export const PROJECT_UPLOAD_STALL_MS = 60_000;
+
 /** The directory an upload lands in: a folder inside a project entry. */
 export type ProjectUploadTarget = {
   /** Project entry id (the file-tree node's `pe_id`). */
@@ -149,7 +159,57 @@ export type ProjectUploadResult = {
   renamed: boolean;
 };
 
+/**
+ * Why an upload to a project failed — coarse enough to tell the user what to do about it:
+ * - `tooLarge`: 413, over {@link PROJECT_UPLOAD_MAX_BYTES}
+ * - `unauthorized`: 401, still after one session refresh
+ * - `forbidden`: 403 / 404 — not the caller's entry, or the folder is gone
+ * - `badRequest`: 400 — the target is not an existing directory, or the file name is not allowed
+ * - `network`: no response — a connection error, or no progress for {@link PROJECT_UPLOAD_STALL_MS}
+ * - `server`: any other failure, including a 2xx that is not a usable success envelope
+ * - `aborted`: the caller's AbortSignal fired
+ */
+export type ProjectUploadFailure =
+  | 'tooLarge'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'badRequest'
+  | 'network'
+  | 'server'
+  | 'aborted';
+
+/** Rejection of {@link uploadFileToProject}: `reason` is for the UI, `message` for logs. */
+export class ProjectUploadError extends Error {
+  readonly reason: ProjectUploadFailure;
+  /** HTTP status of the failed response; 0 when there was none. */
+  readonly status: number;
+
+  constructor(reason: ProjectUploadFailure, message: string, status = 0) {
+    super(message);
+    this.name = 'ProjectUploadError';
+    this.reason = reason;
+    this.status = status;
+  }
+}
+
+/**
+ * The failure class of anything {@link uploadFileToProject} rejected with. Tolerates
+ * a plain Error too (matched by the legacy sentinel messages), so a caller never
+ * has to care whether `instanceof` survived module duplication.
+ */
+export function projectUploadFailureOf(error: unknown): ProjectUploadFailure {
+  if (error instanceof ProjectUploadError) return error.reason;
+  if (error instanceof Error) {
+    if (error.message === 'FILE_TOO_LARGE') return 'tooLarge';
+    if (error.message === UPLOAD_ABORTED_ERROR) return 'aborted';
+  }
+  return 'server';
+}
+
 const PROJECT_UPLOAD_PATH = '/api/fs/upload-to-project';
+
+/** The raw outcome of one POST, before it is judged. */
+type ProjectUploadReply = { status: number; statusText: string; responseText: string };
 
 /** Human-readable text from a JSON error body (`error`, then `msg` / `message`), if it has any. */
 function readServerErrorText(responseText: string): string | null {
@@ -167,6 +227,131 @@ function readServerErrorText(responseText: string): string | null {
   return null;
 }
 
+const failureForStatus = (status: number): ProjectUploadFailure => {
+  if (status === 401) return 'unauthorized';
+  if (status === 403 || status === 404) return 'forbidden';
+  if (status === 400) return 'badRequest';
+  return 'server';
+};
+
+/**
+ * POST `file` once. Builds a fresh multipart body on every call, so the 401 retry
+ * can simply call it again. Resolves with whatever the server answered; rejects
+ * only when there is no answer (network error, stall, abort).
+ */
+function sendProjectUpload(
+  file: File,
+  target: ProjectUploadTarget,
+  onProgress: ((percent: number) => void) | undefined,
+  signal: AbortSignal | undefined
+): Promise<ProjectUploadReply> {
+  return new Promise<ProjectUploadReply>((resolve, reject) => {
+    // Checked before anything is created, so an already-cancelled upload opens no request.
+    if (signal?.aborted) {
+      reject(new ProjectUploadError('aborted', UPLOAD_ABORTED_ERROR));
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('pe_id', target.pe_id);
+    formData.append('relative_path', target.relative_path);
+    formData.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${getBaseUrl()}${PROJECT_UPLOAD_PATH}`);
+
+    // Same identity as the other /api/fs calls, which go through httpRequest:
+    // while the super admin acts as another user, the entry belongs to that user.
+    const actAs = getActAsUser();
+    if (actAs && shouldAttachActAs(PROJECT_UPLOAD_PATH)) {
+      xhr.setRequestHeader(ACT_AS_HEADER, actAs);
+    }
+
+    let stalled = false;
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
+    const armStallWatchdog = (): void => {
+      clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        stalled = true;
+        xhr.abort();
+      }, PROJECT_UPLOAD_STALL_MS);
+    };
+
+    // Closing the XHR tears down the socket; the backend treats the truncated
+    // multipart body as a disconnect and deletes the partial file.
+    const onSignalAbort = (): void => xhr.abort();
+    signal?.addEventListener('abort', onSignalAbort);
+    const settle = (): void => {
+      clearTimeout(stallTimer);
+      signal?.removeEventListener('abort', onSignalAbort);
+    };
+
+    xhr.upload.addEventListener('progress', (e) => {
+      armStallWatchdog();
+      if (onProgress && e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+    // Body fully sent: the response now has the same window to start arriving.
+    xhr.upload.addEventListener('load', armStallWatchdog);
+    xhr.addEventListener('progress', armStallWatchdog);
+
+    xhr.addEventListener('load', () => {
+      settle();
+      resolve({ status: xhr.status, statusText: xhr.statusText, responseText: xhr.responseText });
+    });
+
+    xhr.addEventListener('error', () => {
+      settle();
+      reject(new ProjectUploadError('network', 'Upload failed: network error'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      settle();
+      reject(
+        stalled
+          ? new ProjectUploadError('network', `Upload stalled: no progress for ${PROJECT_UPLOAD_STALL_MS / 1000}s`)
+          : new ProjectUploadError('aborted', UPLOAD_ABORTED_ERROR)
+      );
+    });
+
+    xhr.send(formData);
+    armStallWatchdog();
+  });
+}
+
+/** Judge a reply: the stored file on success, a {@link ProjectUploadError} otherwise. */
+function readProjectUploadReply(reply: ProjectUploadReply, file: File): ProjectUploadResult {
+  const { status } = reply;
+  if (status === 413) {
+    throw new ProjectUploadError('tooLarge', 'FILE_TOO_LARGE', status);
+  }
+  if (status < 200 || status >= 300) {
+    const statusLine = `Upload failed: ${status} ${reply.statusText}`.trim();
+    throw new ProjectUploadError(
+      failureForStatus(status),
+      readServerErrorText(reply.responseText) ?? statusLine,
+      status
+    );
+  }
+  let body: { success?: boolean; data?: Partial<ProjectUploadResult> } | null;
+  try {
+    body = JSON.parse(reply.responseText) as typeof body;
+  } catch {
+    throw new ProjectUploadError('server', 'Upload failed: invalid server response', status);
+  }
+  const data = body?.data;
+  if (!body?.success || !data || typeof data.name !== 'string' || typeof data.relative_path !== 'string') {
+    throw new ProjectUploadError('server', 'Upload failed: server returned unsuccessful response', status);
+  }
+  return {
+    name: data.name,
+    relative_path: data.relative_path,
+    size: typeof data.size === 'number' ? data.size : file.size,
+    renamed: data.renamed === true,
+  };
+}
+
 /**
  * Upload one file into a directory of a project entry (the Explorer's
  * "Upload files") via `POST /api/fs/upload-to-project` (multipart). A name
@@ -178,109 +363,30 @@ function readServerErrorText(responseText: string): string | null {
  * first and then streams the file straight into it — a `file` part that comes
  * first is rejected with 400.
  *
- * Rejects with `FILE_TOO_LARGE` on 413, {@link UPLOAD_ABORTED_ERROR} when the
- * signal aborts, and otherwise with an Error carrying the server's `error` /
- * `msg` text when the response has one (else the HTTP status).
+ * An expired session is handled like `httpRequest` does: a 401 triggers one
+ * silent session refresh (a no-op outside the WebUI browser) and, if that
+ * worked, the upload is sent once more.
+ *
+ * Rejects with a {@link ProjectUploadError}: `FILE_TOO_LARGE` on 413,
+ * {@link UPLOAD_ABORTED_ERROR} when the signal aborts, and otherwise the
+ * server's `error` / `msg` text when the response has one (else the HTTP status).
  *
  * @param target     Entry + directory to upload into.
  * @param onProgress Optional callback receiving upload percentage (0-100).
  * @param options    Optional bag — supports an `AbortSignal` to cancel.
  */
-export function uploadFileToProject(
+export async function uploadFileToProject(
   file: File,
   target: ProjectUploadTarget,
   onProgress?: (percent: number) => void,
   options?: UploadFileOptions
 ): Promise<ProjectUploadResult> {
-  const formData = new FormData();
-  formData.append('pe_id', target.pe_id);
-  formData.append('relative_path', target.relative_path);
-  formData.append('file', file);
-
-  return new Promise<ProjectUploadResult>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${getBaseUrl()}${PROJECT_UPLOAD_PATH}`);
-
-    // Same identity as the other /api/fs calls, which go through httpRequest:
-    // while the super admin acts as another user, the entry belongs to that user.
-    const actAs = getActAsUser();
-    if (actAs && shouldAttachActAs(PROJECT_UPLOAD_PATH)) {
-      xhr.setRequestHeader(ACT_AS_HEADER, actAs);
-    }
-
-    const signal = options?.signal;
-    let onSignalAbort: (() => void) | null = null;
-    if (signal) {
-      if (signal.aborted) {
-        reject(new Error(UPLOAD_ABORTED_ERROR));
-        return;
-      }
-      onSignalAbort = () => {
-        try {
-          xhr.abort();
-        } catch {
-          /* ignore */
-        }
-      };
-      signal.addEventListener('abort', onSignalAbort);
-    }
-
-    const detachSignal = (): void => {
-      if (signal && onSignalAbort) {
-        signal.removeEventListener('abort', onSignalAbort);
-        onSignalAbort = null;
-      }
-    };
-
-    if (onProgress) {
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          onProgress(Math.round((e.loaded / e.total) * 100));
-        }
-      });
-    }
-
-    xhr.addEventListener('load', () => {
-      detachSignal();
-      if (xhr.status === 413) {
-        reject(new Error('FILE_TOO_LARGE'));
-        return;
-      }
-      if (xhr.status < 200 || xhr.status >= 300) {
-        const statusLine = `Upload failed: ${xhr.status} ${xhr.statusText}`.trim();
-        reject(new Error(readServerErrorText(xhr.responseText) ?? statusLine));
-        return;
-      }
-      try {
-        const result = JSON.parse(xhr.responseText) as { success?: boolean; data?: Partial<ProjectUploadResult> };
-        const data = result?.data;
-        if (!result?.success || !data || typeof data.name !== 'string' || typeof data.relative_path !== 'string') {
-          reject(new Error('Upload failed: server returned unsuccessful response'));
-          return;
-        }
-        resolve({
-          name: data.name,
-          relative_path: data.relative_path,
-          size: typeof data.size === 'number' ? data.size : file.size,
-          renamed: data.renamed === true,
-        });
-      } catch {
-        reject(new Error('Upload failed: invalid server response'));
-      }
-    });
-
-    xhr.addEventListener('error', () => {
-      detachSignal();
-      reject(new Error('Upload failed: network error'));
-    });
-
-    xhr.addEventListener('abort', () => {
-      detachSignal();
-      reject(new Error(UPLOAD_ABORTED_ERROR));
-    });
-
-    xhr.send(formData);
-  });
+  const signal = options?.signal;
+  let reply = await sendProjectUpload(file, target, onProgress, signal);
+  if (reply.status === 401 && (await refreshSession())) {
+    reply = await sendProjectUpload(file, target, onProgress, signal);
+  }
+  return readProjectUploadReply(reply, file);
 }
 
 // ===== 文件类型支持配置 =====
