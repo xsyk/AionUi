@@ -144,6 +144,7 @@ const UPLOAD_REASON_KEY: Record<UploadFailureReason, string> = {
   forbidden: 'conversation.explorer.uploadReason.forbidden',
   badRequest: 'conversation.explorer.uploadReason.badRequest',
   network: 'conversation.explorer.uploadReason.network',
+  busy: 'conversation.explorer.uploadReason.busy',
   server: 'conversation.explorer.uploadReason.server',
 };
 

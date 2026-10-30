@@ -678,6 +678,7 @@
       "forbidden": "sin permiso o la carpeta no existe",
       "badRequest": "la carpeta no existe o el nombre no es válido",
       "network": "red interrumpida o tiempo agotado",
+      "busy": "Servidor ocupado, inténtalo de nuevo más tarde",
       "server": "error del servidor"
     },
     "uploadNamesMore": "{{names}}, entre otros",

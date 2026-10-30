@@ -683,6 +683,7 @@
       "forbidden": "sem permissão ou pasta inexistente",
       "badRequest": "pasta inexistente ou nome de arquivo inválido",
       "network": "rede interrompida ou tempo esgotado",
+      "busy": "Servidor ocupado, tente novamente mais tarde",
       "server": "erro no servidor"
     },
     "uploadNamesMore": "{{names}}, entre outros",

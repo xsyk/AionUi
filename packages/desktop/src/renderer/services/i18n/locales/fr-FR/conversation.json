@@ -677,6 +677,7 @@
       "forbidden": "accès refusé ou dossier introuvable",
       "badRequest": "dossier introuvable ou nom de fichier invalide",
       "network": "réseau interrompu ou délai dépassé",
+      "busy": "Serveur occupé, réessayez plus tard",
       "server": "erreur du serveur"
     },
     "uploadNamesMore": "{{names}}, entre autres",

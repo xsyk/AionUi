@@ -165,7 +165,9 @@ export type ProjectUploadResult = {
  * - `unauthorized`: 401, still after one session refresh
  * - `forbidden`: 403 / 404 — not the caller's entry, or the folder is gone
  * - `badRequest`: 400 — the target is not an existing directory, or the file name is not allowed
- * - `network`: no response — a connection error, or no progress for {@link PROJECT_UPLOAD_STALL_MS}
+ * - `network`: no response — a connection error, or no progress for {@link PROJECT_UPLOAD_STALL_MS};
+ *   also 408, the server's own idle timeout on the request body
+ * - `busy`: 503 — the server is already running its maximum number of uploads
  * - `server`: any other failure, including a 2xx that is not a usable success envelope
  * - `aborted`: the caller's AbortSignal fired
  */
@@ -175,6 +177,7 @@ export type ProjectUploadFailure =
   | 'forbidden'
   | 'badRequest'
   | 'network'
+  | 'busy'
   | 'server'
   | 'aborted';
 
@@ -231,6 +234,8 @@ const failureForStatus = (status: number): ProjectUploadFailure => {
   if (status === 401) return 'unauthorized';
   if (status === 403 || status === 404) return 'forbidden';
   if (status === 400) return 'badRequest';
+  if (status === 408) return 'network';
+  if (status === 503) return 'busy';
   return 'server';
 };
 

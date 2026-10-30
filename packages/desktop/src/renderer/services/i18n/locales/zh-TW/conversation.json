@@ -677,6 +677,7 @@
       "forbidden": "沒有權限或資料夾不存在",
       "badRequest": "資料夾不存在或檔名不合法",
       "network": "網路中斷或逾時",
+      "busy": "伺服器忙碌中，請稍後再試",
       "server": "伺服器錯誤"
     },
     "uploadNamesMore": "{{names}} 等",

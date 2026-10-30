@@ -232,6 +232,8 @@ describe('uploadFileToProject response', () => {
     [400, 'badRequest'],
     [403, 'forbidden'],
     [404, 'forbidden'],
+    [408, 'network'],
+    [503, 'busy'],
     [500, 'server'],
     [502, 'server'],
   ])('classifies a %i response as %s', async (status, reason) => {

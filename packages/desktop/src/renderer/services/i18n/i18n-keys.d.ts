@@ -694,6 +694,7 @@ export type I18nKey =
   | 'conversation.explorer.uploadPartialFailed'
   | 'conversation.explorer.uploadPartialFailedRenamed'
   | 'conversation.explorer.uploadReason.badRequest'
+  | 'conversation.explorer.uploadReason.busy'
   | 'conversation.explorer.uploadReason.forbidden'
   | 'conversation.explorer.uploadReason.network'
   | 'conversation.explorer.uploadReason.server'

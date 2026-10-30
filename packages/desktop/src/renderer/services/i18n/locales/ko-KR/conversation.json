@@ -677,6 +677,7 @@
       "forbidden": "권한이 없거나 폴더가 없음",
       "badRequest": "폴더가 없거나 파일 이름이 올바르지 않음",
       "network": "네트워크 끊김 또는 시간 초과",
+      "busy": "서버가 혼잡합니다. 잠시 후 다시 시도하세요",
       "server": "서버 오류"
     },
     "uploadNamesMore": "{{names}} 등",

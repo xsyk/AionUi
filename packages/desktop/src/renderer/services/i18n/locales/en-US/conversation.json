@@ -677,6 +677,7 @@
       "forbidden": "no access or folder not found",
       "badRequest": "folder not found or invalid file name",
       "network": "network interrupted or timed out",
+      "busy": "Server busy, please try again later",
       "server": "server error"
     },
     "uploadNamesMore": "{{names}}, among others",

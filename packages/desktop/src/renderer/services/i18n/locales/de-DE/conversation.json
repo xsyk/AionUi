@@ -678,6 +678,7 @@
       "forbidden": "keine Berechtigung oder Ordner nicht gefunden",
       "badRequest": "Ordner nicht gefunden oder ungültiger Dateiname",
       "network": "Netzwerk unterbrochen oder Zeitüberschreitung",
+      "busy": "Server ausgelastet, bitte später erneut versuchen",
       "server": "Serverfehler"
     },
     "uploadNamesMore": "{{names}} u. a.",

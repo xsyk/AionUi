@@ -679,6 +679,7 @@
       "forbidden": "izin yok veya klasör bulunamadı",
       "badRequest": "klasör bulunamadı veya dosya adı geçersiz",
       "network": "bağlantı kesildi veya zaman aşımı",
+      "busy": "Sunucu meşgul, lütfen daha sonra tekrar deneyin",
       "server": "sunucu hatası"
     },
     "uploadNamesMore": "{{names}} vb.",
