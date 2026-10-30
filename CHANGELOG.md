@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.0.2](https://github.com/xsyk/AionUi/releases/tag/v1.0.2) (2026-10-31)
+
+Files can now be uploaded straight into a folder of the workspace tree, and the server folder picker always opens on top of the dialog that called it.
+
+### Desktop
+
+#### Features
+
+- **explorer:** upload files into the selected folder
+
+#### Bug Fixes
+
+- **explorer:** harden batch upload (stalls, auth refresh, reasons)
+- **explorer:** send the original file name as a form field
+- **explorer:** explain server-side upload timeouts and busy replies
+- **workspace:** open the server folder picker above lifted modals
+
+### Core ([v1.0.2](https://github.com/xsyk/AionCore/releases/tag/v1.0.2))
+
+#### Features
+
+- **file:** upload files into a project directory
+
+#### Bug Fixes
+
+- **file:** stream project uploads into a hidden temp file
+
 ## [1.0.1](https://github.com/xsyk/AionUi/releases/tag/v1.0.1) (2026-10-10)
 
 Models, agents and the image generation model are now configured once by the administrator and shared by every user. Work and log directories default to /data/.AionEasiful, and the sign-in page puts Feishu first.
