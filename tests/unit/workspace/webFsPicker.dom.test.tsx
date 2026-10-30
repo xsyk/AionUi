@@ -121,3 +121,51 @@ describe('WebFsPicker new folder', () => {
     expect(screen.queryByRole('button', { name: 'New folder' })).toBeNull();
   });
 });
+
+describe('WebFsPicker stacking', () => {
+  // Mimic an Arco modal that is already open: Arco renders a mask and a wrapper side by side in body.
+  const fakeModals: HTMLElement[] = [];
+  const openModal = (zIndex: number, display = 'block') => {
+    for (const cls of ['arco-modal-mask', 'arco-modal-wrapper']) {
+      const el = document.createElement('div');
+      el.className = cls;
+      el.style.zIndex = String(zIndex);
+      el.style.display = display;
+      document.body.appendChild(el);
+      fakeModals.push(el);
+    }
+  };
+  const pickerLayers = async () => {
+    const dialog = await screen.findByRole('dialog');
+    const wrapper = dialog.closest<HTMLElement>('.arco-modal-wrapper');
+    const mask = wrapper?.parentElement?.querySelector<HTMLElement>('.arco-modal-mask');
+    return { wrapper: wrapper?.style.zIndex ?? '', mask: mask?.style.zIndex ?? '' };
+  };
+
+  afterEach(() => {
+    fakeModals.splice(0).forEach((el) => el.remove());
+  });
+
+  it('stacks above a modal that lifted itself over the Arco default', async () => {
+    openModal(10000);
+    openDirectoryPicker();
+
+    const { wrapper, mask } = await pickerLayers();
+    expect(Number(wrapper)).toBeGreaterThan(10000);
+    expect(Number(mask)).toBeGreaterThan(10000);
+    expect(Number(mask)).toBeLessThanOrEqual(Number(wrapper));
+  });
+
+  it('keeps the Arco default when no other modal is open', async () => {
+    openDirectoryPicker();
+
+    expect(await pickerLayers()).toEqual({ wrapper: '', mask: '' });
+  });
+
+  it('ignores modals that are closed but still mounted', async () => {
+    openModal(10000, 'none');
+    openDirectoryPicker();
+
+    expect(await pickerLayers()).toEqual({ wrapper: '', mask: '' });
+  });
+});

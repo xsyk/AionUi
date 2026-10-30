@@ -48,6 +48,27 @@ type PickerProps = {
   onDone: (paths: string[] | undefined) => void;
 };
 
+/** Arco stacks every Modal (mask and wrapper alike) at this z-index unless told otherwise. */
+const ARCO_MODAL_Z_INDEX = 1001;
+
+/**
+ * The picker stands in for a native dialog, which always sits above the window that opened it. Some
+ * callers lift their own modal well above Arco's default (the team wizard sits at 10000), and a Modal
+ * left at the default would then open underneath them. Returns the z-index to use for the picker's mask
+ * and wrapper: one above the highest modal layer currently shown, or `undefined` to keep Arco's default
+ * when nothing needs to be cleared. Closed modals that are still mounted (`display: none`) don't count.
+ */
+const zIndexAboveOpenModals = (): number | undefined => {
+  let top = 0;
+  for (const el of document.querySelectorAll<HTMLElement>('.arco-modal-wrapper, .arco-modal-mask')) {
+    const style = getComputedStyle(el);
+    if (style.display === 'none') continue;
+    const z = Number.parseInt(style.zIndex, 10);
+    if (Number.isFinite(z) && z > top) top = z;
+  }
+  return top >= ARCO_MODAL_Z_INDEX ? top + 1 : undefined;
+};
+
 export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
   const { t } = useTranslation();
   const properties = options?.properties ?? [];
@@ -59,6 +80,8 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
   const fileMode = wantsFile;
 
   const [visible, setVisible] = useState(true);
+  // Decided once, when the picker opens: the modal it must clear is the one open at that moment.
+  const [zIndex] = useState(zIndexAboveOpenModals);
   const [currentDir, setCurrentDir] = useState<string>('');
   const [pathDraft, setPathDraft] = useState<string>('');
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -202,6 +225,8 @@ export const WebFsPicker: React.FC<PickerProps> = ({ options, onDone }) => {
       autoFocus={false}
       focusLock
       style={{ width: 'calc(100vw - 32px)', maxWidth: 640 }}
+      maskStyle={zIndex === undefined ? undefined : { zIndex }}
+      wrapStyle={zIndex === undefined ? undefined : { zIndex }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <span
