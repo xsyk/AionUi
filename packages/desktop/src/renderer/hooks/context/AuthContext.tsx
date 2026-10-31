@@ -43,13 +43,14 @@ interface AuthContextValue {
   status: AuthStatus;
   login: (params: LoginParams) => Promise<LoginResult>;
   logout: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<boolean>;
   clearAuthCache: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const AUTH_USER_ENDPOINT = '/api/auth/user';
+const AUTH_REFRESH_TIMEOUT_MS = 15000;
 
 const isDesktopRuntime = typeof window !== 'undefined' && Boolean(window.electronAPI);
 
@@ -141,7 +142,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setStatus('authenticated');
       setUser(null);
       setReady(true);
-      return;
+      return true;
     }
 
     abortRef.current?.abort();
@@ -149,7 +150,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     abortRef.current = controller;
     setStatus('checking');
 
-    const currentUser = await fetchCurrentUser(controller.signal);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const currentUser = await Promise.race([
+      fetchCurrentUser(controller.signal),
+      new Promise<null>((resolve) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          resolve(null);
+        }, AUTH_REFRESH_TIMEOUT_MS);
+      }),
+    ]);
+    clearTimeout(timeout);
+    // A superseded refresh must not overwrite the newer caller's authentication state.
+    if (abortRef.current !== controller) return false;
     if (currentUser) {
       setUser(currentUser);
       setStatus('authenticated');
@@ -158,6 +171,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setStatus('unauthenticated');
     }
     setReady(true);
+    return Boolean(currentUser);
   }, []);
 
   useEffect(() => {

@@ -349,7 +349,7 @@ const getKatexStyleSheet = (): CSSStyleSheet | null => {
 
 type ShadowDivElement = HTMLDivElement & { __init__shadow?: boolean };
 
-const ShadowView = ({ children }: { children: React.ReactNode }) => {
+const ShadowView = ({ children, privateTheme = true }: { children: React.ReactNode; privateTheme?: boolean }) => {
   const [root, setRoot] = useState<ShadowRoot | null>(null);
   const styleRef = React.useRef<HTMLStyleElement | null>(null);
   const [customCss, setCustomCss] = useState<string>('');
@@ -357,6 +357,7 @@ const ShadowView = ({ children }: { children: React.ReactNode }) => {
   const isMobile = layout?.isMobile ?? false;
 
   React.useEffect(() => {
+    if (!privateTheme) return;
     let mounted = true;
     const applyCss = (t: { css?: string } | null) => {
       if (!mounted) return;
@@ -371,7 +372,7 @@ const ShadowView = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       off?.();
     };
-  }, []);
+  }, [privateTheme]);
 
   // Update CSS variables and custom styles in Shadow DOM
   const updateStyles = React.useCallback(

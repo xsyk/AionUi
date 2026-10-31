@@ -802,5 +802,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "プランを展開",
     "collapse": "プランを折りたたむ"
+  },
+  "sharing": {
+    "pageTitle": "共有された会話",
+    "readOnly": "閲覧専用 · 更新すると最新のメッセージを表示",
+    "unavailable": "会話が存在しないか、共有が無効です。",
+    "loadEarlier": "以前のメッセージを読み込む",
+    "empty": "メッセージはありません",
+    "toolInput": "入力",
+    "toolOutput": "出力",
+    "manageTitle": "会話を共有",
+    "enabled": "共有を有効にする",
+    "description": "リンクを持つ人は最新の内容を閲覧できます。共有を無効にするとアクセスを停止し、再度有効にすると同じリンクが使えます。",
+    "link": "共有リンク",
+    "copyLink": "リンクをコピー",
+    "disabled": "共有は停止中です。再度有効にすると同じリンクが使えます。",
+    "requestFailed": "リクエストに失敗しました。再試行し、会話の所有者であることを確認してください。",
+    "resourceUnavailable": "このリソースは利用できないか、共有対象に含まれていません。"
+  },
+  "feishuBinding": {
+    "title": "Feishuに接続",
+    "description": "新しいメッセージを双方向に同期します。グループ全員が会話と操作の承認を行えます。接続を管理できるのは会話の所有者のみです。",
+    "connected": "{{type}}に接続済み",
+    "group": "グループチャット",
+    "direct": "個別チャット",
+    "unbind": "接続を解除",
+    "instructions": "個別チャットでボットにこのコマンドを送るか、対象グループでボットを@メンションして送信してください。接続できるのは会話の所有者のみです。",
+    "command": "接続コマンド",
+    "copyCommand": "コマンドをコピー",
+    "expires": "有効期限 {{time}}",
+    "generate": "接続コードを生成"
   }
 }

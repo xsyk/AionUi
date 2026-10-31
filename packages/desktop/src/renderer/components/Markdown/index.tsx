@@ -33,6 +33,20 @@ const isLocalFilePath = (src: string): boolean => {
   return true;
 };
 
+const isRelativeResourcePath = (value: string): boolean =>
+  Boolean(value.trim()) && !/^(?:[a-z][a-z\d+.-]*:|[\\/])|[?#]/i.test(value.trim()) && !/\p{Cc}/u.test(value);
+
+const resolveRelativeResourcePath = (href: string): string | null => {
+  if (!isRelativeResourcePath(href)) return null;
+  try {
+    // Markdown has URI-encoded this destination; the resource API expects a path.
+    const path = decodeURIComponent(href);
+    return isRelativeResourcePath(path) ? path : null;
+  } catch {
+    return null;
+  }
+};
+
 type MarkdownViewProps = {
   children: string;
   hiddenCodeCopyButton?: boolean;
@@ -40,23 +54,34 @@ type MarkdownViewProps = {
   className?: string;
   onRef?: (el?: HTMLDivElement | null) => void;
   onLocalFileLink?: (path: string, reference?: LocalFileLinkReference) => void | Promise<void>;
+  /** Resolve token-scoped resources on anonymous read-only pages. */
+  renderResource?: (path: string, label: React.ReactNode, kind: 'image' | 'file') => React.ReactNode;
   /** Enable raw HTML rendering in markdown content. Use with caution — only for trusted sources. */
   allowHtml?: boolean;
 };
 
 const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
-  ({ hiddenCodeCopyButton, codeStyle, className, onRef, onLocalFileLink, allowHtml, children: childrenProp }) => {
+  ({
+    hiddenCodeCopyButton,
+    codeStyle,
+    className,
+    onRef,
+    onLocalFileLink,
+    renderResource,
+    allowHtml,
+    children: childrenProp,
+  }) => {
     const { t } = useTranslation();
     const preview = useOptionalPreviewContext();
 
     const normalizedChildren = useMemo(() => {
       if (typeof childrenProp === 'string') {
-        let text = childrenProp.replace(/file:\/\//g, '');
+        let text = renderResource ? childrenProp : childrenProp.replace(/file:\/\//g, '');
         text = convertLatexDelimiters(text);
         return text;
       }
       return childrenProp;
-    }, [childrenProp]);
+    }, [childrenProp, renderResource]);
 
     const handleLinkClick = useCallback(
       (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -99,7 +124,24 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         a: ({ node: _node, ...rest }: Record<string, unknown>) => {
           const anchorProps = rest as React.AnchorHTMLAttributes<HTMLAnchorElement>;
           const rawHref = typeof anchorProps.href === 'string' ? anchorProps.href : '';
+          if (renderResource && /^file:/i.test(rawHref)) {
+            try {
+              // The private link resolver also normalizes editor locations. A public
+              // resource needs the URI pathname decoded exactly once, preserving %25.
+              const path = decodeURIComponent(new URL(rawHref).pathname).replace(/^\/([A-Za-z]:[\\/])/, '$1');
+              return renderResource(path, anchorProps.children, 'file');
+            } catch {
+              return <span>{anchorProps.children}</span>;
+            }
+          }
           const localFileReference = resolveLocalFileLinkReference(rawHref);
+          if (localFileReference && renderResource) {
+            return renderResource(localFileReference.filePath, anchorProps.children, 'file');
+          }
+          const relativeResource = renderResource ? resolveRelativeResourcePath(rawHref) : null;
+          if (relativeResource && renderResource) {
+            return renderResource(relativeResource, anchorProps.children, 'file');
+          }
           if (localFileReference) {
             return (
               <LocalFileLink reference={localFileReference} onOpen={onLocalFileLink}>
@@ -115,21 +157,40 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         td: MarkdownTd,
         img: ({ node: _node, ...rest }: Record<string, unknown>) => {
           const imgProps = rest as React.ImgHTMLAttributes<HTMLImageElement>;
+          let sameOriginImage = false;
+          if (renderResource && typeof window !== 'undefined') {
+            try {
+              sameOriginImage = new URL(imgProps.src || '', window.location.href).origin === window.location.origin;
+            } catch {
+              /* A malformed URL stays subject to normal markdown sanitization. */
+            }
+          }
+          if (renderResource && (isLocalFilePath(imgProps.src || '') || sameOriginImage)) {
+            let path = imgProps.src || '';
+            try {
+              path = decodeURIComponent(path);
+            } catch {
+              /* Keep the original malformed reference. */
+            }
+            return renderResource(path, imgProps.alt || '', 'image');
+          }
           if (isLocalFilePath(imgProps.src || '')) {
             const src = decodeURIComponent(imgProps.src || '');
             return <LocalImageView src={src} alt={imgProps.alt || ''} className={imgProps.className} />;
           }
-          return <img {...imgProps} alt={imgProps.alt || ''} />;
+          return (
+            <img {...imgProps} alt={imgProps.alt || ''} referrerPolicy={renderResource ? 'no-referrer' : undefined} />
+          );
         },
       }),
-      [codeStyle, hiddenCodeCopyButton, handleLinkClick, onLocalFileLink]
+      [codeStyle, hiddenCodeCopyButton, handleLinkClick, onLocalFileLink, renderResource]
     );
 
     const rehypePlugins = useMemo(() => (allowHtml ? [rehypeRaw, rehypeKatex] : [rehypeKatex]), [allowHtml]);
 
     return (
       <div className={classNames('relative w-full', className)}>
-        <ShadowView>
+        <ShadowView privateTheme={!renderResource}>
           <div ref={onRef} className='markdown-shadow-body'>
             <ReactMarkdown
               remarkPlugins={MARKDOWN_REMARK_PLUGINS}

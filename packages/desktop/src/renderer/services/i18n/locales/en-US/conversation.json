@@ -802,5 +802,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "Expand plan",
     "collapse": "Collapse plan"
+  },
+  "sharing": {
+    "pageTitle": "Shared conversation",
+    "readOnly": "Read only · Refresh to see the latest messages",
+    "unavailable": "This conversation is unavailable or sharing is disabled.",
+    "loadEarlier": "Load earlier messages",
+    "empty": "No messages yet",
+    "toolInput": "Input",
+    "toolOutput": "Output",
+    "manageTitle": "Share conversation",
+    "enabled": "Enable sharing",
+    "description": "Anyone with the link can view the latest content. Turning sharing off pauses access; turning it on restores the same link.",
+    "link": "Share link",
+    "copyLink": "Copy link",
+    "disabled": "Sharing is paused. This same link will work when sharing is enabled again.",
+    "requestFailed": "Unable to complete the request. Please retry or check that you own this conversation.",
+    "resourceUnavailable": "This resource is unavailable or is not included in the share."
+  },
+  "feishuBinding": {
+    "title": "Connect to Feishu",
+    "description": "New messages sync both ways. All group members can chat and approve operations. Only the conversation owner can manage the connection.",
+    "connected": "Connected to {{type}}",
+    "group": "Group chat",
+    "direct": "Direct chat",
+    "unbind": "Disconnect",
+    "instructions": "Send this command to the bot in a direct chat, or @mention the bot in the target group. Only the conversation owner can connect it.",
+    "command": "Connection command",
+    "copyCommand": "Copy command",
+    "expires": "Valid until {{time}}",
+    "generate": "Generate connection code"
   }
 }

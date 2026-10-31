@@ -803,5 +803,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "Plan ausklappen",
     "collapse": "Plan einklappen"
+  },
+  "sharing": {
+    "pageTitle": "Geteilte Unterhaltung",
+    "readOnly": "Nur lesen · Aktualisieren für neue Nachrichten",
+    "unavailable": "Die Unterhaltung ist nicht verfügbar oder die Freigabe ist deaktiviert.",
+    "loadEarlier": "Ältere Nachrichten laden",
+    "empty": "Noch keine Nachrichten",
+    "toolInput": "Eingabe",
+    "toolOutput": "Ausgabe",
+    "manageTitle": "Unterhaltung teilen",
+    "enabled": "Freigabe aktivieren",
+    "description": "Jeder mit dem Link kann aktuelle Inhalte lesen. Deaktivieren pausiert den Zugriff; beim Aktivieren funktioniert derselbe Link wieder.",
+    "link": "Freigabelink",
+    "copyLink": "Link kopieren",
+    "disabled": "Die Freigabe ist pausiert. Nach dem Aktivieren funktioniert derselbe Link wieder.",
+    "requestFailed": "Anfrage fehlgeschlagen. Bitte erneut versuchen und Eigentümerberechtigung prüfen.",
+    "resourceUnavailable": "Diese Ressource ist nicht verfügbar oder nicht für die Freigabe autorisiert."
+  },
+  "feishuBinding": {
+    "title": "Mit Feishu verbinden",
+    "description": "Neue Nachrichten werden beidseitig synchronisiert. Alle Gruppenmitglieder können schreiben und Aktionen genehmigen. Nur der Eigentümer verwaltet die Verbindung.",
+    "connected": "Mit {{type}} verbunden",
+    "group": "Gruppenchat",
+    "direct": "Direktchat",
+    "unbind": "Verbindung trennen",
+    "instructions": "Diesen Befehl im Direktchat an den Bot senden oder den Bot in der Zielgruppe @erwähnen. Nur der Eigentümer kann die Verbindung herstellen.",
+    "command": "Verbindungsbefehl",
+    "copyCommand": "Befehl kopieren",
+    "expires": "Gültig bis {{time}}",
+    "generate": "Verbindungscode erstellen"
   }
 }

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getPublicShareToken } from '@/common/utils/urlValidation';
 import { bridge } from '@/common/platform/bridge';
 import { WEBUI_DEFAULT_PORT } from '@/common/config/constants';
 import { refreshSession } from './sessionRefresh';
@@ -70,7 +71,7 @@ if (win.electronAPI) {
       });
     },
   });
-} else {
+} else if (!getPublicShareToken(window.location.hash)) {
   // Web 环境 - 使用 WebSocket 通信，并在登录后自动补上已获取 Cookie 的连接
   // Web runtime bridge: ensure the socket reconnects after login so session cookie can be sent.
   // Path must be `/ws` — web-host's static-server only proxies WebSocket upgrades under /ws.

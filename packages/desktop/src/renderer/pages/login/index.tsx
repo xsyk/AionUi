@@ -15,10 +15,18 @@ import { feishuErrorKey, fetchFeishuLoginStatus, startFeishuLogin } from './feis
 import type { FeishuLoginStatus } from './feishuLogin';
 import LoginCard from './LoginCard';
 import type { LoginNotice } from './LoginMessage';
+import {
+  exchangeFeishuCode,
+  isFeishuClient,
+  loadFeishuSdk,
+  reconnectAfterFeishuLogin,
+  requestFeishuCode,
+} from './inAppLogin';
+import { readCsrfCookie } from '@/renderer/pages/share/shareApi';
 import PasswordPanel from './PasswordPanel';
 import RedirectingPanel from './RedirectingPanel';
 
-type LoginView = 'feishu' | 'password' | 'redirecting';
+type LoginView = 'feishu' | 'password' | 'redirecting' | 'in-app';
 
 /** How long a failed username/password attempt stays on screen. */
 const AUTO_CLEAR_NOTICE_MS = 5000;
@@ -29,7 +37,9 @@ const REDIRECT_FALLBACK_MS = 15000;
 const LoginPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { status } = useAuth();
+  const { status, refresh } = useAuth();
+  const inAppAttempted = useRef(false);
+  const inAppPending = useRef(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [feishu, setFeishu] = useState<FeishuLoginStatus | null>(null);
@@ -71,6 +81,33 @@ const LoginPage: React.FC = () => {
       alive = false;
     };
   }, []);
+
+  const startInAppLogin = useCallback(async () => {
+    if (!feishu?.appId || inAppPending.current) return;
+    inAppPending.current = true;
+    showNotice(null);
+    setView('in-app');
+    try {
+      const sdk = await loadFeishuSdk();
+      const code = await requestFeishuCode(sdk, feishu.appId);
+      await exchangeFeishuCode(code, readCsrfCookie());
+      if (!(await refresh())) throw new Error('FEISHU_LOGIN_UPSTREAM');
+      reconnectAfterFeishuLogin();
+    } catch (error) {
+      const code = error instanceof Error ? error.message.replace(/^FEISHU_LOGIN_/, '').toLowerCase() : 'upstream';
+      showNotice({ type: 'error', text: t(feishuErrorKey(code) || 'login.feishu.errors.upstream') });
+      setView('feishu');
+    } finally {
+      inAppPending.current = false;
+    }
+  }, [feishu, refresh, showNotice, t]);
+
+  useEffect(() => {
+    if (status !== 'unauthenticated' || !feishu?.enabled || !feishu.appId || inAppAttempted.current) return;
+    if (!isFeishuClient(navigator.userAgent, Boolean(window.electronAPI))) return;
+    inAppAttempted.current = true;
+    void startInAppLogin();
+  }, [status, feishu, startInAppLogin]);
 
   // The Feishu callback redirects back here with `?feishu_error=<code>` on failure. The message
   // stays until the user acts, so a long one (pending approval) can be read in full.
@@ -116,7 +153,7 @@ const LoginPage: React.FC = () => {
     return <AppLoader />;
   }
 
-  if (view === 'redirecting') {
+  if (view === 'redirecting' || view === 'in-app') {
     return (
       <LoginCard title={t('login.feishu.redirectingTitle')}>
         <RedirectingPanel />
@@ -130,7 +167,11 @@ const LoginPage: React.FC = () => {
         <FeishuPanel
           notice={notice}
           autoFocus={returnedFromPassword}
-          onStart={() => switchView('redirecting')}
+          onStart={() => {
+            if (feishu.appId && isFeishuClient(navigator.userAgent, Boolean(window.electronAPI)))
+              void startInAppLogin();
+            else switchView('redirecting');
+          }}
           onUsePassword={() => switchView('password')}
         />
       </LoginCard>

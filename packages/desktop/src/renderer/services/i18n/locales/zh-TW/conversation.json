@@ -802,5 +802,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "展開計劃",
     "collapse": "收合計劃"
+  },
+  "sharing": {
+    "pageTitle": "分享的會話",
+    "readOnly": "唯讀檢視 · 重新整理可見最新訊息",
+    "unavailable": "會話不存在或已關閉分享。",
+    "loadEarlier": "載入更早的訊息",
+    "empty": "暫無訊息",
+    "toolInput": "輸入",
+    "toolOutput": "輸出",
+    "manageTitle": "分享會話",
+    "enabled": "開啟分享",
+    "description": "任何取得連結的人都能檢視最新內容。關閉後暫停存取，再次開啟時原連結恢復可用。",
+    "link": "分享連結",
+    "copyLink": "複製連結",
+    "disabled": "分享已暫停，再次開啟後原連結恢復可用。",
+    "requestFailed": "請求未完成，請重試並確認你是此會話的擁有者。",
+    "resourceUnavailable": "此資源無法使用，或尚未取得分享授權。"
+  },
+  "feishuBinding": {
+    "title": "連結飛書",
+    "description": "新增訊息雙向同步。群組成員皆可對話及核准操作，只有會話擁有者可以管理連結。",
+    "connected": "已連結{{type}}",
+    "group": "群組聊天",
+    "direct": "私人聊天",
+    "unbind": "解除連結",
+    "instructions": "請在目標私人聊天中向機器人傳送此命令，或在目標群組中 @機器人 後傳送。只有會話擁有者可以完成連結。",
+    "command": "連結命令",
+    "copyCommand": "複製命令",
+    "expires": "有效期限至 {{time}}",
+    "generate": "產生連結碼"
   }
 }

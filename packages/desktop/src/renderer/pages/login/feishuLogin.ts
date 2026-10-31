@@ -18,7 +18,7 @@ const KNOWN_ERRORS = new Set([
   'server',
 ]);
 
-export type FeishuLoginStatus = { enabled: boolean; publicBaseUrl: string | null };
+export type FeishuLoginStatus = { enabled: boolean; publicBaseUrl: string | null; appId?: string };
 
 const DISABLED: FeishuLoginStatus = { enabled: false, publicBaseUrl: null };
 
@@ -35,9 +35,15 @@ export async function fetchFeishuLoginStatus(timeoutMs = FEISHU_STATUS_TIMEOUT_M
   try {
     const response = await fetch('/api/auth/feishu/status', { credentials: 'same-origin', signal: controller.signal });
     if (!response.ok) return DISABLED;
-    const body = (await response.json()) as { data?: { enabled?: boolean; public_base_url?: string | null } };
+    const body = (await response.json()) as {
+      data?: { enabled?: boolean; public_base_url?: string | null; app_id?: string | null };
+    };
     if (body.data?.enabled !== true) return DISABLED;
-    return { enabled: true, publicBaseUrl: body.data.public_base_url || null };
+    return {
+      enabled: true,
+      publicBaseUrl: body.data.public_base_url || null,
+      ...(body.data.app_id ? { appId: body.data.app_id } : {}),
+    };
   } catch {
     return DISABLED;
   } finally {

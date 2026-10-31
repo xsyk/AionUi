@@ -46,6 +46,9 @@ import './components/workspace/registerWebFsPicker';
 import type { PropsWithChildren } from 'react';
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { getPublicShareToken } from '@/common/utils/urlValidation';
+import { watchPublicShareNavigation } from '@/renderer/pages/share/shareNavigation';
+import PublicSharePage from './pages/share';
 import { SWRConfig } from 'swr';
 import type { TFunction } from 'i18next';
 
@@ -481,25 +484,33 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
   );
 };
 
-void registerPwa();
+const publicShareToken = !window.electronAPI ? getPublicShareToken(window.location.hash) : null;
+if (!window.electronAPI) watchPublicShareNavigation(publicShareToken);
+if (!publicShareToken) void registerPwa();
 
 const root = createRoot(document.getElementById('root')!);
 root.render(
-  <BackendStartupGate
-    renderStarting={() => (
-      <Config>
-        <BackendStartingView />
-      </Config>
-    )}
-    renderFailure={(failure) => (
-      <Config>
-        <BackendStartupFailureDialog failure={failure} />
-      </Config>
-    )}
-    renderApp={() => (
-      <AppProviders>
-        <App />
-      </AppProviders>
-    )}
-  />
+  publicShareToken ? (
+    <Config>
+      <PublicSharePage token={publicShareToken} />
+    </Config>
+  ) : (
+    <BackendStartupGate
+      renderStarting={() => (
+        <Config>
+          <BackendStartingView />
+        </Config>
+      )}
+      renderFailure={(failure) => (
+        <Config>
+          <BackendStartupFailureDialog failure={failure} />
+        </Config>
+      )}
+      renderApp={() => (
+        <AppProviders>
+          <App />
+        </AppProviders>
+      )}
+    />
+  )
 );

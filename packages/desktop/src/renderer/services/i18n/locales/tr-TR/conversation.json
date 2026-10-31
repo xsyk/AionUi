@@ -804,5 +804,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "Planı genişlet",
     "collapse": "Planı daralt"
+  },
+  "sharing": {
+    "pageTitle": "Paylaşılan konuşma",
+    "readOnly": "Salt okunur · Yeni mesajlar için yenileyin",
+    "unavailable": "Konuşma kullanılamıyor veya paylaşım kapalı.",
+    "loadEarlier": "Önceki mesajları yükle",
+    "empty": "Henüz mesaj yok",
+    "toolInput": "Girdi",
+    "toolOutput": "Çıktı",
+    "manageTitle": "Konuşmayı paylaş",
+    "enabled": "Paylaşımı aç",
+    "description": "Bağlantıya sahip herkes güncel içeriği görebilir. Kapatmak erişimi duraklatır; açmak aynı bağlantıyı yeniden etkinleştirir.",
+    "link": "Paylaşım bağlantısı",
+    "copyLink": "Bağlantıyı kopyala",
+    "disabled": "Paylaşım duraklatıldı. Açıldığında aynı bağlantı çalışacaktır.",
+    "requestFailed": "İstek tamamlanamadı. Yeniden deneyin ve konuşmanın sahibi olduğunuzu kontrol edin.",
+    "resourceUnavailable": "Bu kaynak kullanılamıyor veya paylaşım kapsamında değil."
+  },
+  "feishuBinding": {
+    "title": "Feishu bağlantısı",
+    "description": "Yeni mesajlar çift yönlü eşitlenir. Tüm grup üyeleri sohbet edebilir ve işlemleri onaylayabilir. Bağlantıyı yalnızca sahibi yönetir.",
+    "connected": "{{type}} bağlantısı kuruldu",
+    "group": "Grup sohbeti",
+    "direct": "Özel sohbet",
+    "unbind": "Bağlantıyı kes",
+    "instructions": "Bu komutu özel sohbette bota gönderin veya hedef grupta botu @etiketleyin. Bağlantıyı yalnızca konuşmanın sahibi kurabilir.",
+    "command": "Bağlantı komutu",
+    "copyCommand": "Komutu kopyala",
+    "expires": "{{time}} tarihine kadar geçerli",
+    "generate": "Bağlantı kodu oluştur"
   }
 }

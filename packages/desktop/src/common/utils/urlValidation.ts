@@ -97,3 +97,9 @@ export function isOpenAIHost(urlString: string): boolean {
 export function isAnthropicHost(urlString: string): boolean {
   return isOfficialHost(urlString, Object.values(API_HOST_CONFIG.anthropic));
 }
+
+/** Resolve the dedicated anonymous share route without matching nested/private URLs. */
+export function getPublicShareToken(hash: string): string | null {
+  const match = /^#\/share\/([A-Za-z0-9_-]+)\/?(?:\?.*)?$/.exec(hash);
+  return match?.[1] ?? null;
+}

@@ -808,5 +808,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "Expandir plano",
     "collapse": "Recolher plano"
+  },
+  "sharing": {
+    "pageTitle": "Conversa compartilhada",
+    "readOnly": "Somente leitura · Atualize para ver novas mensagens",
+    "unavailable": "A conversa está indisponível ou o compartilhamento está desativado.",
+    "loadEarlier": "Carregar mensagens anteriores",
+    "empty": "Nenhuma mensagem",
+    "toolInput": "Entrada",
+    "toolOutput": "Saída",
+    "manageTitle": "Compartilhar conversa",
+    "enabled": "Ativar compartilhamento",
+    "description": "Qualquer pessoa com o link pode ver o conteúdo recente. Desativar pausa o acesso; reativar restaura o mesmo link.",
+    "link": "Link de compartilhamento",
+    "copyLink": "Copiar link",
+    "disabled": "O compartilhamento está pausado. O mesmo link funcionará após a reativação.",
+    "requestFailed": "Não foi possível concluir a solicitação. Tente novamente e confirme que você é o proprietário.",
+    "resourceUnavailable": "Este recurso está indisponível ou não está incluído no compartilhamento."
+  },
+  "feishuBinding": {
+    "title": "Conectar ao Feishu",
+    "description": "Novas mensagens são sincronizadas nos dois sentidos. Todos os membros podem conversar e aprovar ações. Somente o proprietário gerencia a conexão.",
+    "connected": "Conectado a {{type}}",
+    "group": "Chat em grupo",
+    "direct": "Chat direto",
+    "unbind": "Desconectar",
+    "instructions": "Envie este comando ao bot no chat direto ou @mencione-o no grupo de destino. Somente o proprietário pode conectar a conversa.",
+    "command": "Comando de conexão",
+    "copyCommand": "Copiar comando",
+    "expires": "Válido até {{time}}",
+    "generate": "Gerar código"
   }
 }

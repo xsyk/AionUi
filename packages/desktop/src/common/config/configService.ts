@@ -1,3 +1,4 @@
+import { getPublicShareToken } from '@/common/utils/urlValidation';
 import type { ConfigKey, ConfigKeyMap } from './configKeys';
 
 type Subscriber = (value: unknown) => void;
@@ -56,6 +57,11 @@ class ConfigServiceImpl {
   initialize(): Promise<void> {
     if (this.initPromise) return this.initPromise;
     this.initPromise = (async () => {
+      // Public shares use local display preferences and never fetch private settings.
+      if (typeof window !== 'undefined' && !window.electronAPI && getPublicShareToken(window.location?.hash ?? '')) {
+        this.initialized = true;
+        return;
+      }
       const data = await fetchJson<Record<string, unknown>>('GET', '/api/settings/client');
       this.cache.clear();
       if (data) {

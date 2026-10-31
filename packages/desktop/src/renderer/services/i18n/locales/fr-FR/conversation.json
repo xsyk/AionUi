@@ -802,5 +802,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "Développer le plan",
     "collapse": "Réduire le plan"
+  },
+  "sharing": {
+    "pageTitle": "Conversation partagée",
+    "readOnly": "Lecture seule · Actualisez pour voir les nouveaux messages",
+    "unavailable": "Conversation indisponible ou partage désactivé.",
+    "loadEarlier": "Charger les messages précédents",
+    "empty": "Aucun message",
+    "toolInput": "Entrée",
+    "toolOutput": "Sortie",
+    "manageTitle": "Partager la conversation",
+    "enabled": "Activer le partage",
+    "description": "Toute personne disposant du lien peut consulter le contenu récent. Désactiver suspend l’accès ; réactiver rétablit le même lien.",
+    "link": "Lien de partage",
+    "copyLink": "Copier le lien",
+    "disabled": "Le partage est suspendu. Le même lien fonctionnera après réactivation.",
+    "requestFailed": "Échec de la demande. Réessayez et vérifiez que vous possédez cette conversation.",
+    "resourceUnavailable": "Cette ressource est indisponible ou non autorisée au partage."
+  },
+  "feishuBinding": {
+    "title": "Connecter à Feishu",
+    "description": "Les nouveaux messages sont synchronisés dans les deux sens. Tous les membres peuvent discuter et approuver les actions. Seul le propriétaire gère la connexion.",
+    "connected": "Connecté à {{type}}",
+    "group": "Discussion de groupe",
+    "direct": "Discussion privée",
+    "unbind": "Déconnecter",
+    "instructions": "Envoyez cette commande au bot en privé ou @mentionnez-le dans le groupe cible. Seul le propriétaire peut établir la connexion.",
+    "command": "Commande de connexion",
+    "copyCommand": "Copier la commande",
+    "expires": "Valide jusqu’à {{time}}",
+    "generate": "Générer un code"
   }
 }

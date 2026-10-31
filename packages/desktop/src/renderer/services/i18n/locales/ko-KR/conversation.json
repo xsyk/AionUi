@@ -802,5 +802,35 @@
     "progress": "{{completed}}/{{total}}",
     "expand": "계획 펼치기",
     "collapse": "계획 접기"
+  },
+  "sharing": {
+    "pageTitle": "공유된 대화",
+    "readOnly": "읽기 전용 · 새로 고침하면 최신 메시지가 표시됩니다",
+    "unavailable": "대화가 없거나 공유가 꺼져 있습니다.",
+    "loadEarlier": "이전 메시지 불러오기",
+    "empty": "메시지가 없습니다",
+    "toolInput": "입력",
+    "toolOutput": "출력",
+    "manageTitle": "대화 공유",
+    "enabled": "공유 켜기",
+    "description": "링크를 가진 누구나 최신 내용을 볼 수 있습니다. 공유를 끄면 접근이 중지되고 다시 켜면 같은 링크를 사용할 수 있습니다.",
+    "link": "공유 링크",
+    "copyLink": "링크 복사",
+    "disabled": "공유가 중지되었습니다. 다시 켜면 같은 링크를 사용할 수 있습니다.",
+    "requestFailed": "요청을 완료하지 못했습니다. 다시 시도하고 대화 소유자인지 확인하세요.",
+    "resourceUnavailable": "이 리소스를 사용할 수 없거나 공유 범위에 포함되지 않았습니다."
+  },
+  "feishuBinding": {
+    "title": "Feishu 연결",
+    "description": "새 메시지가 양방향으로 동기화됩니다. 모든 그룹 구성원이 대화하고 작업을 승인할 수 있으며 소유자만 연결을 관리합니다.",
+    "connected": "{{type}} 연결됨",
+    "group": "그룹 채팅",
+    "direct": "개인 채팅",
+    "unbind": "연결 해제",
+    "instructions": "개인 채팅에서 봇에게 명령을 보내거나 대상 그룹에서 봇을 @멘션하여 보내세요. 대화 소유자만 연결할 수 있습니다.",
+    "command": "연결 명령",
+    "copyCommand": "명령 복사",
+    "expires": "{{time}}까지 유효",
+    "generate": "연결 코드 생성"
   }
 }

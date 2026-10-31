@@ -7,6 +7,7 @@
  */
 
 import { refreshSession, WS_CLOSE_POLICY_VIOLATION } from './sessionRefresh';
+import { getPublicShareToken } from '@/common/utils/urlValidation';
 
 // ---------------------------------------------------------------------------
 // Base URL
@@ -258,6 +259,9 @@ export async function httpRequest<T>(
   body?: unknown,
   options?: HttpRequestOptions
 ): Promise<T> {
+  if (typeof window !== 'undefined' && !window.electronAPI && getPublicShareToken(window.location?.hash ?? '')) {
+    throw new Error('Private API access is unavailable on a public share');
+  }
   const headers: Record<string, string> = {};
 
   if (body !== undefined) {
@@ -454,6 +458,7 @@ function dispatchWsEvent(eventName: string, payload: unknown): void {
 }
 
 function ensureWs(): void {
+  if (typeof window !== 'undefined' && !window.electronAPI && getPublicShareToken(window.location?.hash ?? '')) return;
   if (typeof window === 'undefined') {
     console.debug('[ensureWs] skipped: no window');
     return;
