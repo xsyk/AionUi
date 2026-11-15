@@ -1457,6 +1457,31 @@
     "source": "출처",
     "sourcePassword": "비밀번호",
     "sourceFeishu": "Feishu",
+    "feishuDirectory": {
+      "start": "Feishu 주소록 동기화",
+      "starting": "동기화 시작 중…",
+      "running": "Feishu 주소록 동기화 중…",
+      "completed": "Feishu 주소록 동기화 완료",
+      "partial": "Feishu 주소록 동기화 일부 완료",
+      "failed": "Feishu 주소록 동기화 실패",
+      "description": "이 Feishu 앱에서 볼 수 있는 모든 주소록 구성원을 동기화합니다. 새 계정은 가입 설정에 따라 승인이 필요하면 승인 대기, 즉시 허용이면 활성 상태로 생성됩니다. 기존 계정의 상태는 유지됩니다.",
+      "configRequired": "먼저 Feishu 로그인 설정을 저장하고 활성화하세요.",
+      "counts": {
+        "scanned": "읽음: {{count}}",
+        "created": "생성: {{count}}",
+        "updated": "업데이트: {{count}}",
+        "unchanged": "변경 없음: {{count}}",
+        "skipped": "건너뜀: {{count}}",
+        "failed": "실패: {{count}}"
+      },
+      "errors": {
+        "permissionDenied": "Feishu 주소록을 읽을 수 없습니다. 앱의 주소록 읽기 권한과 공개 범위를 확인하세요.",
+        "configUnavailable": "Feishu 설정을 사용할 수 없습니다. 로그인 설정을 확인하고 저장하세요.",
+        "configChanged": "동기화 중 Feishu 설정이 변경되었습니다. 동기화를 다시 시작하세요.",
+        "timeout": "Feishu 주소록 동기화 시간이 초과되었습니다. 나중에 다시 시도하세요.",
+        "syncFailed": "Feishu 주소록 동기화에 실패했습니다. 나중에 다시 시도하세요."
+      }
+    },
     "feishu": {
       "title": "Feishu 로그인",
       "enabled": "Feishu 로그인 사용",
@@ -1473,7 +1498,7 @@
       "signupPolicy": "신규 사용자 가입 방식",
       "signupApproval": "승인 필요",
       "signupOpen": "즉시 허용",
-      "signupPolicyHint": "승인 필요: Feishu로 처음 로그인한 사용자는 관리자가 아래 사용자 목록에서 활성화해야 사용할 수 있습니다. 변경 사항은 이후 처음 로그인하는 사용자에게만 적용됩니다.",
+      "signupPolicyHint": "이 설정은 로그인 또는 주소록 동기화로 새로 생성되는 Feishu 계정에 적용됩니다. 기존 계정의 상태는 유지됩니다.",
       "advanced": "고급 설정",
       "apiBase": "Feishu API URL",
       "accountsBase": "Feishu 인증 페이지 URL",

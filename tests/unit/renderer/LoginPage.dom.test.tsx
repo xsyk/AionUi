@@ -33,7 +33,7 @@ import { readRememberedCredentials, rememberCredentials } from '@/renderer/pages
 
 type LoginResult = { success: boolean; code?: string };
 
-function stubFeishuStatus(response: { enabled: boolean } | 'error') {
+function stubFeishuStatus(response: { enabled: boolean; app_id?: string } | 'error') {
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => {
@@ -41,7 +41,7 @@ function stubFeishuStatus(response: { enabled: boolean } | 'error') {
       return {
         ok: true,
         json: async () => ({
-          data: { enabled: response.enabled, public_base_url: response.enabled ? 'https://a.example.com' : null },
+          data: { ...response, public_base_url: response.enabled ? 'https://a.example.com' : null },
         }),
       };
     })
@@ -86,6 +86,8 @@ function renderLogin(entry = '/login') {
 }
 
 describe('LoginPage', () => {
+  const electronAPI = window.electronAPI;
+
   beforeEach(() => {
     authState.status = 'unauthenticated';
     authState.login.mockReset();
@@ -93,9 +95,47 @@ describe('LoginPage', () => {
     localStorage.clear();
   });
   afterEach(() => {
+    window.electronAPI = electronAPI;
     vi.useRealTimers();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
+
+  it.each(['Feishu', 'Lark'])('opens the ordinary login page in %s without loading an H5 SDK', async (client) => {
+    delete window.electronAPI;
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(`Mozilla ${client}/7.0`);
+    stubFeishuStatus({ enabled: true, app_id: 'cli-legacy' });
+    renderLogin();
+
+    expect(await screen.findByTestId('feishu-login-button')).toBeTruthy();
+    expect(document.querySelector('script[src*="h5-js-sdk"]')).toBeNull();
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual(['/api/auth/feishu/status']);
+  });
+
+  it.each(['Feishu', 'Lark'])(
+    'starts ordinary OAuth in %s even when a client SDK is already injected',
+    async (client) => {
+      delete window.electronAPI;
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(`Mozilla ${client}/7.0`);
+      const sdk = { requestAccess: vi.fn(), requestAuthCode: vi.fn() };
+      vi.stubGlobal('tt', sdk);
+      stubFeishuStatus({ enabled: true, app_id: 'cli-legacy' });
+      renderLogin();
+
+      fireEvent.click(await screen.findByTestId('feishu-login-button'));
+      await waitFor(() =>
+        expect(startFeishuLogin).toHaveBeenCalledExactlyOnceWith({
+          enabled: true,
+          publicBaseUrl: 'https://a.example.com',
+        })
+      );
+      expect({ requestAccess: sdk.requestAccess.mock.calls, requestAuthCode: sdk.requestAuthCode.mock.calls }).toEqual({
+        requestAccess: [],
+        requestAuthCode: [],
+      });
+      expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual(['/api/auth/feishu/status']);
+    }
+  );
 
   it('opens on the Feishu view when Feishu login is enabled', async () => {
     stubFeishuStatus({ enabled: true });

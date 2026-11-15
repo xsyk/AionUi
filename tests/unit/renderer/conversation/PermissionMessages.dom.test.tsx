@@ -5,15 +5,18 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IMessageAcpPermission, IMessagePermission } from '@/common/chat/chatLib';
+import type { IMessageAcpPermission, IMessageAsk, IMessagePermission } from '@/common/chat/chatLib';
+import { BackendHttpError } from '@/common/adapter/httpBridge';
+import MessageQuestion from '@/renderer/pages/conversation/Messages/MessageQuestion';
 import MessageAcpPermission from '@/renderer/pages/conversation/Messages/acp/MessageAcpPermission';
 import MessagePermission from '@/renderer/pages/conversation/Messages/components/MessagePermission';
 
-const { genericInvoke, acpInvoke } = vi.hoisted(() => ({
+const { genericInvoke, acpInvoke, answerAskInvoke } = vi.hoisted(() => ({
   genericInvoke: vi.fn(),
   acpInvoke: vi.fn(),
+  answerAskInvoke: vi.fn(),
 }));
 
 vi.mock('@/common', () => ({
@@ -32,6 +35,9 @@ vi.mock('@/common/adapter/ipcBridge', () => ({
   conversation: {
     confirmMessage: {
       invoke: acpInvoke,
+    },
+    answerAsk: {
+      invoke: answerAskInvoke,
     },
   },
 }));
@@ -82,6 +88,185 @@ const makeAcpMessage = (): IMessageAcpPermission => ({
       { option_id: 'reject-once-id', name: 'Reject', kind: 'reject_once' },
     ],
   },
+});
+
+const makeAskMessage = (): IMessageAsk => ({
+  id: 'ask-message-1',
+  conversation_id: 'conversation-1',
+  type: 'ask',
+  position: 'left',
+  content: {
+    session_id: 'session-1',
+    request_id: 'ask-request-1',
+    questions: [
+      {
+        question: 'Which features?',
+        multi_select: true,
+        options: [{ label: 'Fast' }, { label: 'Safe' }],
+      },
+      { question: 'Which platform?', options: [{ label: 'Linux' }] },
+    ],
+  },
+});
+
+const fillAskDraft = () => {
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Fast' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Safe' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'messages.askOther' }));
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: '  My custom platform  ' } });
+};
+
+const deferredAnswer = () => {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+};
+
+const askFailure = () =>
+  new BackendHttpError({
+    method: 'POST',
+    path: '/api/conversations/conversation-1/asks/ask-request-1/answer',
+    status: 500,
+    body: { error: 'private backend details: token=secret-test-token' },
+  });
+
+const askActions = [
+  { action: 'submit', status: 'messages.askAnswered' },
+  { action: 'decline', status: 'messages.askDeclined' },
+] as const;
+
+describe('question card submission', () => {
+  beforeEach(() => {
+    answerAskInvoke.mockReset().mockResolvedValue(undefined);
+  });
+
+  it.each(askActions)('shows a safe localized failure when $action is rejected', async ({ action }) => {
+    answerAskInvoke.mockRejectedValueOnce(askFailure());
+    render(<MessageQuestion message={makeAskMessage()} />);
+    fillAskDraft();
+
+    fireEvent.click(screen.getByTestId(`message-question-${action}`));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('messages.permissionResponseFailed');
+    expect(screen.queryByTestId('message-question-status')).not.toBeInTheDocument();
+    expect(screen.getByTestId('message-question')).not.toHaveTextContent('secret-test-token');
+  });
+
+  it.each(askActions)('preserves selections and free text after $action fails', async ({ action }) => {
+    answerAskInvoke.mockRejectedValueOnce(askFailure());
+    render(<MessageQuestion message={makeAskMessage()} />);
+    fillAskDraft();
+
+    fireEvent.click(screen.getByTestId(`message-question-${action}`));
+    await screen.findByRole('alert');
+
+    expect(screen.getByRole('checkbox', { name: 'Fast' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Safe' })).toBeChecked();
+    expect(screen.getByRole('textbox')).toHaveValue('  My custom platform  ');
+  });
+
+  it.each(askActions)(
+    'allows $action to retry and waits for acceptance before showing success',
+    async ({ action, status }) => {
+      const retry = deferredAnswer();
+      answerAskInvoke.mockRejectedValueOnce(askFailure()).mockReturnValueOnce(retry.promise);
+      render(<MessageQuestion message={makeAskMessage()} />);
+      fillAskDraft();
+
+      fireEvent.click(screen.getByTestId(`message-question-${action}`));
+      await screen.findByRole('alert');
+      fireEvent.click(screen.getByTestId(`message-question-${action}`));
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('message-question-status')).not.toBeInTheDocument();
+      await act(async () => retry.resolve());
+      expect(screen.getByTestId('message-question-status')).toHaveTextContent(status);
+    }
+  );
+
+  it.each(askActions)('prevents duplicate and opposite actions while $action is pending', async ({ action }) => {
+    const request = deferredAnswer();
+    answerAskInvoke.mockReturnValueOnce(request.promise);
+    render(<MessageQuestion message={makeAskMessage()} />);
+    fillAskDraft();
+
+    fireEvent.click(screen.getByTestId(`message-question-${action}`));
+    fireEvent.click(screen.getByTestId('message-question-submit'));
+    fireEvent.click(screen.getByTestId('message-question-decline'));
+
+    expect(answerAskInvoke).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('message-question-submit')).toBeDisabled();
+    expect(screen.getByTestId('message-question-decline')).toBeDisabled();
+    await act(async () => request.resolve());
+  });
+
+  it.each(askActions)('locks draft inputs while $action is pending', async ({ action }) => {
+    const request = deferredAnswer();
+    answerAskInvoke.mockReturnValueOnce(request.promise);
+    render(<MessageQuestion message={makeAskMessage()} />);
+    fillAskDraft();
+
+    fireEvent.click(screen.getByTestId(`message-question-${action}`));
+
+    expect(screen.getAllByRole('checkbox').every((input) => (input as HTMLInputElement).disabled)).toBe(true);
+    expect(screen.getAllByRole('radio').every((input) => (input as HTMLInputElement).disabled)).toBe(true);
+    expect(screen.getByRole('textbox')).toBeDisabled();
+    await act(async () => request.resolve());
+  });
+
+  it('sends every answer with trimmed free text through the dedicated ask channel', async () => {
+    render(<MessageQuestion message={makeAskMessage()} />);
+    fillAskDraft();
+
+    fireEvent.click(screen.getByTestId('message-question-submit'));
+
+    expect(answerAskInvoke).toHaveBeenCalledWith({
+      conversation_id: 'conversation-1',
+      request_id: 'ask-request-1',
+      answers: [
+        { question: 'Which features?', labels: ['Fast', 'Safe'] },
+        { question: 'Which platform?', labels: ['My custom platform'] },
+      ],
+    });
+    expect(await screen.findByTestId('message-question-status')).toHaveTextContent('messages.askAnswered');
+  });
+
+  it('includes explicit question IDs when question text collides with another question ID', async () => {
+    const message = makeAskMessage();
+    const first = { id: 'q1', question: 'q2', options: [{ label: 'First answer' }] };
+    const second = { id: 'q2', question: 'q1', options: [{ label: 'Second answer' }] };
+    message.content.questions = [first, second];
+    render(<MessageQuestion message={message} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'First answer' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Second answer' }));
+
+    fireEvent.click(screen.getByTestId('message-question-submit'));
+
+    expect(answerAskInvoke).toHaveBeenCalledWith({
+      conversation_id: 'conversation-1',
+      request_id: 'ask-request-1',
+      answers: [
+        { question_id: 'q1', question: 'q2', labels: ['First answer'] },
+        { question_id: 'q2', question: 'q1', labels: ['Second answer'] },
+      ],
+    });
+    expect(await screen.findByTestId('message-question-status')).toHaveTextContent('messages.askAnswered');
+  });
+
+  it('can decline without filling answers and sends only the explicit decline', async () => {
+    render(<MessageQuestion message={makeAskMessage()} />);
+
+    fireEvent.click(screen.getByTestId('message-question-decline'));
+
+    expect(answerAskInvoke).toHaveBeenCalledWith({
+      conversation_id: 'conversation-1',
+      request_id: 'ask-request-1',
+      decline: true,
+    });
+    expect(await screen.findByTestId('message-question-status')).toHaveTextContent('messages.askDeclined');
+  });
 });
 
 describe('permission message adapters', () => {

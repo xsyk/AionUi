@@ -1457,6 +1457,31 @@
     "source": "ソース",
     "sourcePassword": "パスワード",
     "sourceFeishu": "Feishu",
+    "feishuDirectory": {
+      "start": "Feishu の連絡先を同期",
+      "starting": "同期を開始しています…",
+      "running": "Feishu の連絡先を同期しています…",
+      "completed": "Feishu の連絡先の同期が完了しました",
+      "partial": "Feishu の連絡先の同期が一部完了しました",
+      "failed": "Feishu の連絡先の同期に失敗しました",
+      "description": "この Feishu アプリから閲覧可能なすべての連絡先メンバーを同期します。新規アカウントは登録設定に従い、承認が必要な場合は承認待ち、すぐに利用可能な場合は有効になります。既存アカウントの状態は維持されます。",
+      "configRequired": "先に Feishu ログイン設定を保存して有効にしてください。",
+      "counts": {
+        "scanned": "読み取り：{{count}}",
+        "created": "新規作成：{{count}}",
+        "updated": "更新：{{count}}",
+        "unchanged": "変更なし：{{count}}",
+        "skipped": "スキップ：{{count}}",
+        "failed": "失敗：{{count}}"
+      },
+      "errors": {
+        "permissionDenied": "Feishu の連絡先を読み取れません。アプリの連絡先読み取り権限と閲覧可能範囲を確認してください。",
+        "configUnavailable": "Feishu の設定を利用できません。ログイン設定を確認して保存してください。",
+        "configChanged": "同期中に Feishu の設定が変更されました。同期を再開してください。",
+        "timeout": "Feishu の連絡先の同期がタイムアウトしました。後でもう一度お試しください。",
+        "syncFailed": "Feishu の連絡先の同期に失敗しました。後でもう一度お試しください。"
+      }
+    },
     "feishu": {
       "title": "Feishu ログイン",
       "enabled": "Feishu ログインを有効にする",
@@ -1473,7 +1498,7 @@
       "signupPolicy": "新規ユーザーの登録方法",
       "signupApproval": "承認が必要",
       "signupOpen": "すぐに利用可能",
-      "signupPolicyHint": "承認が必要：初めて Feishu でログインしたユーザーは、管理者が下のユーザー一覧で有効にするまで利用できません。変更はこれ以降に初めてログインするユーザーにのみ適用されます。",
+      "signupPolicyHint": "この設定は、ログインまたは連絡先の同期で新しく作成される Feishu アカウントに適用されます。既存アカウントの状態は維持されます。",
       "advanced": "詳細設定",
       "apiBase": "Feishu API URL",
       "accountsBase": "Feishu 認可ページ URL",

@@ -11,10 +11,12 @@
  */
 
 import { httpRequest } from '@/common/adapter/httpBridge';
+import { ensureCsrfCookie, readCsrfCookie } from '../share/shareApi';
 
 export type AdminUser = {
   id: string;
   username: string;
+  display_name?: string | null;
   status: 'active' | 'disabled';
   created_at: number;
   last_login: number | null;
@@ -45,6 +47,21 @@ export type FeishuLoginConfig = {
   accounts_base: string | null;
   callback_url: string;
   signup_policy: FeishuSignupPolicy;
+};
+
+export type FeishuDirectorySyncView = {
+  id: string;
+  status: 'running' | 'completed' | 'failed';
+  scanned: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  failed: number;
+  partial: boolean;
+  error_code: string | null;
+  started_at: number;
+  finished_at: number | null;
 };
 
 export type FeishuLoginForm = {
@@ -99,6 +116,16 @@ export const adminApi = {
   getFeishuLogin: () => httpRequest<FeishuLoginConfig>('GET', '/api/admin/feishu-login'),
   saveFeishuLogin: (payload: Record<string, unknown>) =>
     httpRequest<FeishuLoginConfig>('PUT', '/api/admin/feishu-login', payload),
+  startFeishuDirectorySync: async () => {
+    await ensureCsrfCookie();
+    return httpRequest<FeishuDirectorySyncView>(
+      'POST',
+      '/api/admin/feishu-directory/sync',
+      {},
+      { headers: { 'x-csrf-token': readCsrfCookie() } }
+    );
+  },
+  getFeishuDirectorySync: () => httpRequest<FeishuDirectorySyncView | null>('GET', '/api/admin/feishu-directory/sync'),
   listAllConversations: (limit = 500) =>
     httpRequest<AdminConversation[]>('GET', `/api/admin/conversations?limit=${limit}`),
 };

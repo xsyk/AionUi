@@ -1457,6 +1457,31 @@
     "source": "來源",
     "sourcePassword": "密碼",
     "sourceFeishu": "飛書",
+    "feishuDirectory": {
+      "start": "同步飛書通訊錄",
+      "starting": "正在啟動同步…",
+      "running": "正在同步飛書通訊錄…",
+      "completed": "飛書通訊錄同步完成",
+      "partial": "飛書通訊錄同步部分完成",
+      "failed": "飛書通訊錄同步失敗",
+      "description": "同步飛書應用目前可見的全部通訊錄成員。新帳號遵循現有新使用者註冊方式：先審核時為待審核，直接可用時為啟用；既有帳號保留目前狀態。",
+      "configRequired": "請先儲存並啟用飛書登入設定。",
+      "counts": {
+        "scanned": "讀取：{{count}}",
+        "created": "新增：{{count}}",
+        "updated": "更新：{{count}}",
+        "unchanged": "未變：{{count}}",
+        "skipped": "略過：{{count}}",
+        "failed": "失敗：{{count}}"
+      },
+      "errors": {
+        "permissionDenied": "無法讀取飛書通訊錄，請檢查應用的通訊錄讀取權限及可見範圍。",
+        "configUnavailable": "飛書設定無法使用，請檢查並儲存飛書登入設定。",
+        "configChanged": "同步期間飛書設定已變更，請重新同步。",
+        "timeout": "飛書通訊錄同步逾時，請稍後重試。",
+        "syncFailed": "飛書通訊錄同步失敗，請稍後重試。"
+      }
+    },
     "feishu": {
       "title": "飛書登入",
       "enabled": "啟用飛書登入",
@@ -1473,7 +1498,7 @@
       "signupPolicy": "新使用者註冊方式",
       "signupApproval": "先審核",
       "signupOpen": "直接可用",
-      "signupPolicyHint": "先審核：第一次用飛書登入的人，要等管理員在下方使用者列表中啟用後才能使用。修改只影響之後第一次登入的人。",
+      "signupPolicyHint": "此設定適用於之後透過飛書登入或通訊錄同步新建的帳號，既有帳號保留目前狀態。",
       "advanced": "進階設定",
       "apiBase": "飛書 API 位址",
       "accountsBase": "飛書授權頁位址",

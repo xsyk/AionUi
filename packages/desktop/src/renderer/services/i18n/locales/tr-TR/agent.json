@@ -40,6 +40,14 @@
     "busy": "Başka bir ayar uygulanıyor. Daha sonra tekrar deneyin.",
     "failed": "Ayar uygulanamadı. Önceki durum gösterilmeye devam ediyor."
   },
+  "collaborationMode": {
+    "label": "İş birliği modu",
+    "plan": "Plan",
+    "default": "Varsayılan",
+    "useCliMode": "CLI modunu kullan",
+    "pending": "{{current}} → {{mode}} (sonraki turda)",
+    "switchSuccess": "İş birliği modu değiştirildi"
+  },
   "thoughtLevel": {
     "label": "Düşünme düzeyi",
     "switchSuccess": "Düşünme düzeyi değiştirildi",

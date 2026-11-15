@@ -4,19 +4,41 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Avatar, Button, Form, Input, Message, Modal, Table, Tag } from '@arco-design/web-react';
+import { Alert, Avatar, Button, Form, Input, Message, Modal, Table, Tag } from '@arco-design/web-react';
 import type { TableColumnProps } from '@arco-design/web-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 import { adminApi, isPendingApproval } from './adminApi';
 import FeishuLoginCard from './FeishuLoginCard';
-import type { AdminUser } from './adminApi';
-import { BackendHttpError } from '@/common/adapter/httpBridge';
+import type { AdminUser, FeishuDirectorySyncView, FeishuLoginConfig } from './adminApi';
+import { BackendHttpError, isBackendHttpError } from '@/common/adapter/httpBridge';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import SettingsPageWrapper from '@renderer/pages/settings/components/SettingsPageWrapper';
 
 type PasswordDialog = { mode: 'create' } | { mode: 'reset'; user: AdminUser } | null;
+
+const DIRECTORY = 'settings.userManagement.feishuDirectory';
+const DIRECTORY_COUNTS = ['scanned', 'created', 'updated', 'unchanged', 'skipped', 'failed'] as const;
+
+function directoryErrorKey(code: string | null) {
+  switch (code) {
+    case 'FEISHU_DIRECTORY_PERMISSION_DENIED':
+      return `${DIRECTORY}.errors.permissionDenied` as const;
+    case 'FEISHU_DIRECTORY_CONFIG_UNAVAILABLE':
+      return `${DIRECTORY}.errors.configUnavailable` as const;
+    case 'FEISHU_DIRECTORY_CONFIG_CHANGED':
+      return `${DIRECTORY}.errors.configChanged` as const;
+    case 'FEISHU_DIRECTORY_TIMEOUT':
+      return `${DIRECTORY}.errors.timeout` as const;
+    default:
+      return `${DIRECTORY}.errors.syncFailed` as const;
+  }
+}
+
+function directoryRequestError(error: unknown): string {
+  return (isBackendHttpError(error) && error.code) || 'FEISHU_DIRECTORY_SYNC_FAILED';
+}
 
 function formatTime(ms: number | null, never: string): string {
   return ms ? new Date(ms).toLocaleString() : never;
@@ -35,6 +57,18 @@ const UserSettings: React.FC = () => {
   const [dialog, setDialog] = useState<PasswordDialog>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
+  const [feishuConfig, setFeishuConfig] = useState<FeishuLoginConfig | null>(null);
+  const [syncTask, setSyncTask] = useState<FeishuDirectorySyncView | null>(null);
+  const [syncChecking, setSyncChecking] = useState(true);
+  const [syncStarting, setSyncStarting] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const syncEpoch = useRef(0);
+  const syncStartInFlight = useRef(false);
+  const isSuperAdmin = Boolean(user?.is_super_admin);
+  const syncId = syncTask?.id;
+  const syncStatus = syncTask?.status;
+  const syncRunning = syncStatus === 'running';
+  const directoryConfigured = Boolean(feishuConfig?.enabled && feishuConfig.app_id && feishuConfig.app_secret_set);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -48,8 +82,77 @@ const UserSettings: React.FC = () => {
   }, [t]);
 
   useEffect(() => {
-    if (user?.is_super_admin) void reload();
-  }, [reload, user?.is_super_admin]);
+    if (isSuperAdmin) void reload();
+  }, [isSuperAdmin, reload]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const epoch = ++syncEpoch.current;
+    setSyncChecking(true);
+    setSyncTask(null);
+    setSyncError(null);
+    void adminApi
+      .getFeishuDirectorySync()
+      .then((task) => {
+        if (syncEpoch.current === epoch) setSyncTask(task);
+      })
+      .catch((error: unknown) => {
+        if (syncEpoch.current === epoch) setSyncError(directoryRequestError(error));
+      })
+      .finally(() => {
+        if (syncEpoch.current === epoch) setSyncChecking(false);
+      });
+    return () => {
+      ++syncEpoch.current;
+    };
+  }, [isSuperAdmin, user?.id]);
+
+  useEffect(() => {
+    if (!isSuperAdmin || !syncRunning) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      let keepPolling = true;
+      try {
+        const task = await adminApi.getFeishuDirectorySync();
+        if (cancelled) return;
+        setSyncTask(task);
+        setSyncError(null);
+        keepPolling = task?.status === 'running';
+      } catch (error) {
+        if (cancelled) return;
+        setSyncError(directoryRequestError(error));
+      }
+      if (!cancelled && keepPolling) timer = setTimeout(() => void poll(), 2000);
+    };
+    timer = setTimeout(() => void poll(), 2000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isSuperAdmin, syncId, syncRunning]);
+
+  useEffect(() => {
+    if (isSuperAdmin && syncStatus && syncStatus !== 'running') void reload();
+  }, [isSuperAdmin, reload, syncId, syncStatus]);
+
+  const startDirectorySync = async () => {
+    if (!isSuperAdmin || !directoryConfigured || syncChecking || syncRunning || syncStartInFlight.current) return;
+    const epoch = syncEpoch.current;
+    syncStartInFlight.current = true;
+    setSyncStarting(true);
+    setSyncTask(null);
+    setSyncError(null);
+    try {
+      const task = await adminApi.startFeishuDirectorySync();
+      if (syncEpoch.current === epoch) setSyncTask(task);
+    } catch (error) {
+      if (syncEpoch.current === epoch) setSyncError(directoryRequestError(error));
+    } finally {
+      syncStartInFlight.current = false;
+      if (syncEpoch.current === epoch) setSyncStarting(false);
+    }
+  };
 
   const openDialog = (next: PasswordDialog) => {
     form.resetFields();
@@ -100,31 +203,41 @@ const UserSettings: React.FC = () => {
     });
   };
 
-  if (user && !user.is_super_admin) {
-    return <Navigate to='/settings/agent' replace />;
+  if (!isSuperAdmin) {
+    return user ? <Navigate to='/settings/agent' replace /> : null;
   }
+
+  const syncIncomplete = Boolean(syncTask?.partial || syncTask?.failed || syncTask?.error_code);
+  const syncResultType =
+    syncStatus === 'failed' ? 'error' : syncRunning ? 'info' : syncIncomplete ? 'warning' : 'success';
+  const syncResultKey =
+    syncStatus === 'failed' ? 'failed' : syncRunning ? 'running' : syncIncomplete ? 'partial' : 'completed';
 
   const never = t('settings.userManagement.never');
   const columns: TableColumnProps<AdminUser>[] = [
     {
       title: t('settings.userManagement.username'),
       dataIndex: 'username',
-      render: (_: unknown, row) => (
-        <span className='inline-flex items-center gap-8px'>
-          {row.avatar_url && (
-            <Avatar size={24} style={{ flexShrink: 0 }}>
-              <img src={row.avatar_url} alt={row.username} referrerPolicy='no-referrer' />
-            </Avatar>
-          )}
-          <span className='inline-flex flex-col'>
-            <span className='inline-flex items-center gap-6px'>
-              {row.username}
-              {row.is_super_admin && <Tag color='arcoblue'>{t('settings.userManagement.superAdmin')}</Tag>}
+      render: (_: unknown, row) => {
+        const displayName = row.display_name?.trim() || row.username;
+        return (
+          <span className='inline-flex items-center gap-8px'>
+            {row.avatar_url && (
+              <Avatar size={24} style={{ flexShrink: 0 }}>
+                <img src={row.avatar_url} alt={displayName} referrerPolicy='no-referrer' />
+              </Avatar>
+            )}
+            <span className='inline-flex flex-col'>
+              <span className='inline-flex items-center gap-6px'>
+                {displayName}
+                {row.is_super_admin && <Tag color='arcoblue'>{t('settings.userManagement.superAdmin')}</Tag>}
+              </span>
+              {displayName !== row.username && <span className='text-12px text-t-tertiary'>{row.username}</span>}
+              {row.email && <span className='text-12px text-t-tertiary'>{row.email}</span>}
             </span>
-            {row.email && <span className='text-12px text-t-tertiary'>{row.email}</span>}
           </span>
-        </span>
-      ),
+        );
+      },
     },
     {
       title: t('settings.userManagement.status'),
@@ -199,15 +312,51 @@ const UserSettings: React.FC = () => {
   return (
     <SettingsPageWrapper>
       <div className='flex flex-col gap-16px' data-testid='user-management'>
-        <FeishuLoginCard />
-        <div className='flex items-center justify-between'>
+        <FeishuLoginCard onConfigChange={setFeishuConfig} />
+        <div className='flex flex-wrap items-center justify-between gap-12px'>
           <div>
             <div className='text-16px font-600 text-t-primary'>{t('settings.userManagement.title')}</div>
             <div className='text-12px text-t-tertiary mt-4px'>{t('settings.userManagement.description')}</div>
           </div>
-          <Button type='primary' onClick={() => openDialog({ mode: 'create' })}>
-            {t('settings.userManagement.newUser')}
-          </Button>
+          <div className='flex flex-wrap gap-8px'>
+            <Button
+              loading={syncChecking || syncStarting || syncRunning}
+              disabled={!directoryConfigured || syncChecking || syncStarting || syncRunning}
+              onClick={() => void startDirectorySync()}
+            >
+              {t(`${DIRECTORY}.${syncStarting ? 'starting' : syncRunning ? 'running' : 'start'}`)}
+            </Button>
+            <Button type='primary' onClick={() => openDialog({ mode: 'create' })}>
+              {t('settings.userManagement.newUser')}
+            </Button>
+          </div>
+        </div>
+        <div className='text-12px text-t-tertiary'>
+          {t(`${DIRECTORY}.description`)}
+          {!directoryConfigured && <div className='mt-4px'>{t(`${DIRECTORY}.configRequired`)}</div>}
+        </div>
+        <div className='flex flex-col gap-8px' aria-live='polite'>
+          {syncError && <Alert type='error' content={t(directoryErrorKey(syncError))} />}
+          {syncTask && (
+            <div data-testid='feishu-directory-result'>
+              <Alert
+                type={syncResultType}
+                title={t(`${DIRECTORY}.${syncResultKey}`)}
+                content={
+                  <div className='flex flex-col gap-8px'>
+                    <div className='flex flex-wrap gap-x-16px gap-y-8px'>
+                      {DIRECTORY_COUNTS.map((key) => (
+                        <span key={key}>{t(`${DIRECTORY}.counts.${key}`, { count: syncTask[key] })}</span>
+                      ))}
+                    </div>
+                    {(syncTask.error_code || syncStatus === 'failed') && (
+                      <div>{t(directoryErrorKey(syncTask.error_code))}</div>
+                    )}
+                  </div>
+                }
+              />
+            </div>
+          )}
         </div>
         <Table rowKey='id' loading={loading} columns={columns} data={users} pagination={false} border={false} />
       </div>

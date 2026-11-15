@@ -388,7 +388,14 @@ export function useAcpConfigOptions({
         if (!hasObservedValue(response, optionId, value)) {
           throw new Error(confirmation === 'command_ack' ? 'command_ack' : 'config_not_observed');
         }
-        // A switch that landed supersedes any pending entry for the same option.
+        // A switch that landed supersedes any pending entry for the same option,
+        // including a different target that this observed request cancels.
+        const pending = getConversationPending(conversation_id);
+        if (optionId in pending) {
+          const next = { ...pending };
+          delete next[optionId];
+          setConversationPending(conversation_id, next);
+        }
         resolvePendingFromSnapshot(conversation_id, response.config_options);
         replaceSnapshot(response.config_options);
         return response.config_options;
@@ -436,6 +443,7 @@ export function useAcpConfigOptions({
     mode: deriveSelectOption(configOptions, 'mode', ['mode']),
     model: deriveSelectOption(configOptions, 'model', ['model']),
     thoughtLevel: deriveSelectOption(configOptions, 'thought_level', ['thought_level', 'reasoning_effort']),
+    collaborationMode: deriveSelectOption(configOptions, 'collaboration_mode', ['collaboration_mode']),
     reload,
     setConfigOption,
     isConfigOptionBlocked,

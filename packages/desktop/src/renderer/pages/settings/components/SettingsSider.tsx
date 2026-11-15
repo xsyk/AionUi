@@ -132,8 +132,10 @@ const SettingsSider: React.FC<{ collapsed?: boolean; tooltipEnabled?: boolean }>
       },
     };
 
-    // Start with ordered builtin IDs, hiding desktop-only tabs in browser mode
-    let result: SiderItem[] = BUILTIN_TAB_IDS.filter((id) => isDesktop || id !== 'pet').map((id) => builtinMap[id]);
+    // Start with ordered builtin IDs, applying platform and administrator visibility.
+    let result: SiderItem[] = BUILTIN_TAB_IDS.filter(
+      (id) => (isDesktop || id !== 'pet') && (isSuperAdmin || id !== 'webui')
+    ).map((id) => builtinMap[id]);
     if (isSuperAdmin) {
       result = insertBeforeWebui(result, {
         id: USER_MANAGEMENT_TAB_ID,

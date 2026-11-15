@@ -8,7 +8,7 @@ import { conversation } from '@/common/adapter/ipcBridge';
 import type { IAskQuestion, IMessageAsk } from '@/common/chat/chatLib';
 import { Button, Card, Checkbox, Input, Radio } from '@arco-design/web-react';
 import { CheckOne } from '@icon-park/react';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 // The permission panel's stylesheet supplies the shared card chrome; own.* adds
 // the question-specific pieces (option rows with secondary description lines),
@@ -51,6 +51,11 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
   );
   const [drafts, setDrafts] = useState<Draft[]>(() => questions.map(emptyDraft));
   const [submitted, setSubmitted] = useState<'answered' | 'declined' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'answer' | 'decline' | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const submittingRef = useRef(false);
+  const isSubmitting = pendingAction !== null;
+  const disabled = isSubmitting || submitted !== null;
 
   const updateDraft = useCallback((index: number, patch: Partial<Draft>) => {
     setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
@@ -61,35 +66,47 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
 
   const requestId = content.request_id || message.id;
 
-  const handleSubmit = useCallback(async () => {
-    // claude keys its answers map by the question TEXT; a multi-select answer
-    // is an array of labels (claude joins with ", "). Other-text rides as a
-    // plain label — claude accepts arbitrary answer strings. Sent over the
-    // DEDICATED ask channel, not the permission confirm endpoint.
-    const answers = questions.map((q, i) => {
-      const d = drafts[i];
-      const labels = [...d.labels];
-      if (d.otherSelected && d.other.trim()) labels.push(d.other.trim());
-      return { question: q.question, labels };
-    });
-    await conversation.answerAsk.invoke({ conversation_id: message.conversation_id, request_id: requestId, answers });
-    setSubmitted('answered');
-  }, [drafts, questions, message.conversation_id, requestId]);
+  const handleRespond = useCallback(
+    async (decline: boolean) => {
+      if (submittingRef.current || submitted !== null || (!decline && !allAnswered)) return;
+      submittingRef.current = true;
+      setPendingAction(decline ? 'decline' : 'answer');
+      setHasError(false);
 
-  const handleDecline = useCallback(async () => {
-    await conversation.answerAsk.invoke({
-      conversation_id: message.conversation_id,
-      request_id: requestId,
-      decline: true,
-    });
-    setSubmitted('declined');
-  }, [message.conversation_id, requestId]);
+      try {
+        // Answer every question over the dedicated ask channel. Other-text
+        // rides as a plain label; declining must never send an empty allow.
+        const response = decline
+          ? { decline: true }
+          : {
+              answers: questions.map((q, i) => {
+                const d = drafts[i];
+                const labels = [...d.labels];
+                if (d.otherSelected && d.other.trim()) labels.push(d.other.trim());
+                return { question: q.question, labels, ...(q.id ? { question_id: q.id } : {}) };
+              }),
+            };
+        await conversation.answerAsk.invoke({
+          conversation_id: message.conversation_id,
+          request_id: requestId,
+          ...response,
+        });
+        setSubmitted(decline ? 'declined' : 'answered');
+      } catch {
+        setHasError(true);
+      } finally {
+        submittingRef.current = false;
+        setPendingAction(null);
+      }
+    },
+    [allAnswered, drafts, questions, message.conversation_id, requestId, submitted]
+  );
 
   if (!questions.length) return null;
 
   return (
     <Card className={styles.card} bordered={false} data-testid='message-question'>
-      <div className={styles.panel}>
+      <div className={styles.panel} aria-busy={isSubmitting}>
         {questions.map((q, qi) => {
           const d = drafts[qi] ?? emptyDraft();
           // Wire spelling is multi_select (the ws relay snake_cases all keys).
@@ -103,7 +120,7 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
                   className={own.optionList}
                   value={d.labels}
                   onChange={(labels) => updateDraft(qi, { labels: labels as string[] })}
-                  disabled={submitted !== null}
+                  disabled={disabled}
                 >
                   {q.options.map((opt) => (
                     <Checkbox
@@ -128,7 +145,7 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
                       ? updateDraft(qi, { labels: [], otherSelected: true })
                       : updateDraft(qi, { labels: [value], otherSelected: false })
                   }
-                  disabled={submitted !== null}
+                  disabled={disabled}
                 >
                   {q.options.map((opt) => (
                     <Radio
@@ -158,7 +175,7 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
                       placeholder={t('messages.askOtherPlaceholder')}
                       value={d.other}
                       onChange={(v) => updateDraft(qi, { other: v })}
-                      disabled={submitted !== null}
+                      disabled={disabled}
                       data-testid={`message-question-other-input-${qi}`}
                     />
                   ) : null}
@@ -167,6 +184,11 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
             </div>
           );
         })}
+        {hasError && (
+          <div className={`${styles.feedback} ${styles.error}`} role='alert' data-testid='message-question-error'>
+            {t('messages.permissionResponseFailed')}
+          </div>
+        )}
         {submitted === null ? (
           // Plain Arco buttons on purpose: styles.optionButton resets the button
           // chrome to a transparent full-width list row (for permission option
@@ -175,13 +197,20 @@ const MessageQuestion: React.FC<MessageQuestionProps> = React.memo(({ message })
             <Button
               type='primary'
               size='small'
-              disabled={!allAnswered}
-              onClick={handleSubmit}
+              disabled={!allAnswered || isSubmitting}
+              loading={pendingAction === 'answer'}
+              onClick={() => void handleRespond(false)}
               data-testid='message-question-submit'
             >
               {t('messages.askSubmit')}
             </Button>
-            <Button size='small' onClick={handleDecline} data-testid='message-question-decline'>
+            <Button
+              size='small'
+              disabled={isSubmitting}
+              loading={pendingAction === 'decline'}
+              onClick={() => void handleRespond(true)}
+              data-testid='message-question-decline'
+            >
               {t('messages.askDecline')}
             </Button>
           </div>

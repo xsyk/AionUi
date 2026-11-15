@@ -11,7 +11,7 @@ import { getModelDisplayLabel } from '@/renderer/utils/model/agentLogo';
 import { iconColors } from '@/renderer/styles/colors';
 import { Dropdown, Menu, Message, Tooltip } from '@arco-design/web-react';
 import { Brain, Down } from '@icon-park/react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import RuntimeSelectorPill, { RuntimeSelectorLoadingIndicator } from './RuntimeSelectorPill';
 import {
@@ -90,6 +90,8 @@ const AcpModelSelector: React.FC<{
     isSetting,
     selectModel,
     thoughtLevel,
+    collaborationMode,
+    pendingValues = {},
     setStatus,
     setConfigOption,
     isConfigOptionBlocked = () => false,
@@ -145,6 +147,51 @@ const AcpModelSelector: React.FC<{
     },
     [isConfigOptionBlocked, isRuntimeSetting, setConfigOption, thoughtLevel, t]
   );
+  const hasCollaborationMode = Boolean(collaborationMode?.options.length);
+  const collaborationLabel = (value: string) => {
+    if (value === 'plan') return t('agent.collaborationMode.plan');
+    if (value === 'default') return t('agent.collaborationMode.default');
+    return collaborationMode?.options.find((item) => item.value === value)?.label || value;
+  };
+  const pendingCollaborationMode = collaborationMode ? pendingValues[collaborationMode.id] : undefined;
+  const currentCollaborationLabel = collaborationMode?.currentValue
+    ? collaborationLabel(collaborationMode.currentValue)
+    : t('agent.collaborationMode.useCliMode');
+  const collaborationValueLabel = pendingCollaborationMode
+    ? t('agent.collaborationMode.pending', {
+        current: currentCollaborationLabel,
+        mode: collaborationLabel(pendingCollaborationMode),
+      })
+    : currentCollaborationLabel;
+  const collaborationRequestRef = useRef(false);
+  const handleCollaborationSelect = useCallback(
+    async (value: string) => {
+      if (
+        !collaborationMode ||
+        !collaborationMode.options.some((item) => item.value === value) ||
+        (value === collaborationMode.currentValue && !pendingValues[collaborationMode.id]) ||
+        value === pendingValues[collaborationMode.id] ||
+        isRuntimeSetting ||
+        collaborationRequestRef.current ||
+        isConfigOptionBlocked(collaborationMode.id)
+      )
+        return;
+      collaborationRequestRef.current = true;
+      try {
+        const snapshot = await setConfigOption(collaborationMode.id, value);
+        // Pending-next-turn keeps the old observed value. Only report success
+        // when the returned snapshot confirms this axis actually changed.
+        if (snapshot?.some((option) => option.id === collaborationMode.id && option.current_value === value)) {
+          Message.success(t('agent.collaborationMode.switchSuccess'));
+        }
+      } catch (error) {
+        Message.error(t(configErrorMessageKey(error)));
+      } finally {
+        collaborationRequestRef.current = false;
+      }
+    },
+    [collaborationMode, isConfigOptionBlocked, isRuntimeSetting, pendingValues, setConfigOption, t]
+  );
   const tooltipContent = combinedLabel;
 
   const renderLogo = () => <Brain theme='outline' size='14' fill={iconColors.secondary} className='shrink-0' />;
@@ -198,7 +245,7 @@ const AcpModelSelector: React.FC<{
     );
   };
 
-  if (!model_info && isLoading) {
+  if (!model_info && !hasCollaborationMode && isLoading) {
     return (
       <div
         data-testid='acp-model-selector-loading'
@@ -209,11 +256,11 @@ const AcpModelSelector: React.FC<{
     );
   }
 
-  if (!model_info) {
+  if (!model_info && !hasCollaborationMode) {
     return renderReadonlyPill(t('conversation.welcome.useCliModel'), t('conversation.welcome.modelSwitchNotSupported'));
   }
 
-  if (!canSwitch) {
+  if (!canSwitch && !hasCollaborationMode) {
     return renderReadonlyPill(combinedLabel, tooltipContent);
   }
 
@@ -225,62 +272,93 @@ const AcpModelSelector: React.FC<{
       {...(isMobileHeaderCompact ? { getPopupContainer: () => document.body } : {})}
       droplist={
         <Menu>
-          {thoughtLevel ? (
+          {thoughtLevel || hasCollaborationMode ? (
             <>
-              {/* Two-level layout: first level shows model + thought-level rows;
-                  each expands into a left-side submenu with the full option list. */}
-              <Menu.SubMenu
-                key='model'
-                triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
-                title={
-                  <RuntimeSelectorSubMenuTitle
-                    label={t('common.model', { defaultValue: 'Model' })}
-                    value={display_label}
+              {/* Each runtime configuration axis has its own catalog and submenu. */}
+              {Boolean(model_info?.available_models.length) && (
+                <Menu.SubMenu
+                  key='model'
+                  triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                  title={
+                    <RuntimeSelectorSubMenuTitle
+                      label={t('common.model', { defaultValue: 'Model' })}
+                      value={display_label}
+                    />
+                  }
+                >
+                  <RuntimeSelectorModelList
+                    models={model_info?.available_models}
+                    currentModelId={model_info?.current_model_id}
+                    disabled={!canSwitch || isRuntimeSetting || isConfigOptionBlocked('model')}
+                    onSelect={selectModel}
                   />
-                }
-              >
-                <RuntimeSelectorModelList
-                  models={model_info.available_models}
-                  currentModelId={model_info.current_model_id}
-                  disabled={isRuntimeSetting || isConfigOptionBlocked('model')}
-                  onSelect={selectModel}
-                />
-              </Menu.SubMenu>
-              <Menu.SubMenu
-                key='thought-level'
-                triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
-                title={
-                  <RuntimeSelectorSubMenuTitle
-                    label={t('agent.thoughtLevel.label')}
-                    value={getCurrentThoughtLevelLabel(thoughtLevel)}
-                  />
-                }
-              >
-                {thoughtLevel.options.map((item) => (
-                  <Menu.Item
-                    key={item.value}
-                    className={item.value === thoughtLevel.currentValue ? 'bg-2!' : ''}
-                    onClick={() => {
-                      if (!isRuntimeSetting && !isConfigOptionBlocked(thoughtLevel.id)) {
-                        void handleThoughtLevelSelect(item.value);
-                      }
-                    }}
-                  >
-                    <RuntimeSelectorCheckedItem
-                      selected={item.value === thoughtLevel.currentValue}
-                      description={item.description}
+                </Menu.SubMenu>
+              )}
+              {thoughtLevel && (
+                <Menu.SubMenu
+                  key='thought-level'
+                  triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                  title={
+                    <RuntimeSelectorSubMenuTitle
+                      label={t('agent.thoughtLevel.label')}
+                      value={getCurrentThoughtLevelLabel(thoughtLevel)}
+                    />
+                  }
+                >
+                  {thoughtLevel.options.map((item) => (
+                    <Menu.Item
+                      key={item.value}
+                      className={item.value === thoughtLevel.currentValue ? 'bg-2!' : ''}
+                      onClick={() => {
+                        if (!isRuntimeSetting && !isConfigOptionBlocked(thoughtLevel.id)) {
+                          void handleThoughtLevelSelect(item.value);
+                        }
+                      }}
                     >
-                      {item.label}
-                    </RuntimeSelectorCheckedItem>
-                  </Menu.Item>
-                ))}
-              </Menu.SubMenu>
+                      <RuntimeSelectorCheckedItem
+                        selected={item.value === thoughtLevel.currentValue}
+                        description={item.description}
+                      >
+                        {item.label}
+                      </RuntimeSelectorCheckedItem>
+                    </Menu.Item>
+                  ))}
+                </Menu.SubMenu>
+              )}
+              {hasCollaborationMode && collaborationMode && (
+                <Menu.SubMenu
+                  key='collaboration-mode'
+                  triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                  title={
+                    <RuntimeSelectorSubMenuTitle
+                      label={t('agent.collaborationMode.label')}
+                      value={collaborationValueLabel}
+                    />
+                  }
+                >
+                  {collaborationMode.options.map((item) => (
+                    <Menu.Item
+                      key={item.value}
+                      className={item.value === collaborationMode.currentValue ? 'bg-2!' : ''}
+                      disabled={isRuntimeSetting || isConfigOptionBlocked(collaborationMode.id)}
+                      onClick={() => void handleCollaborationSelect(item.value)}
+                    >
+                      <RuntimeSelectorCheckedItem
+                        selected={item.value === collaborationMode.currentValue}
+                        description={item.description}
+                      >
+                        {collaborationLabel(item.value)}
+                      </RuntimeSelectorCheckedItem>
+                    </Menu.Item>
+                  ))}
+                </Menu.SubMenu>
+              )}
             </>
           ) : (
-            /* No thought level: the dropdown is the model list directly. */
+            /* No additional runtime axes: render the model list directly. */
             <RuntimeSelectorModelList
-              models={model_info.available_models}
-              currentModelId={model_info.current_model_id}
+              models={model_info?.available_models}
+              currentModelId={model_info?.current_model_id}
               disabled={isRuntimeSetting || isConfigOptionBlocked('model')}
               onSelect={selectModel}
             />

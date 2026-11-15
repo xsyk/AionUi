@@ -1455,6 +1455,31 @@
     "source": "Kaynak",
     "sourcePassword": "Parola",
     "sourceFeishu": "Feishu",
+    "feishuDirectory": {
+      "start": "Feishu dizinini eşitle",
+      "starting": "Eşitleme başlatılıyor…",
+      "running": "Feishu dizini eşitleniyor…",
+      "completed": "Feishu dizini eşitlemesi tamamlandı",
+      "partial": "Feishu dizini eşitlemesi kısmen tamamlandı",
+      "failed": "Feishu dizini eşitlemesi başarısız",
+      "description": "Bu Feishu uygulamasının görebildiği tüm dizin üyelerini eşitler. Yeni hesaplar kayıt ayarına uyar: onay gerekiyorsa onay bekler, hemen erişime izin veriliyorsa etkin olur. Mevcut hesaplar durumlarını korur.",
+      "configRequired": "Önce Feishu giriş yapılandırmasını kaydedip etkinleştirin.",
+      "counts": {
+        "scanned": "Okunan: {{count}}",
+        "created": "Oluşturulan: {{count}}",
+        "updated": "Güncellenen: {{count}}",
+        "unchanged": "Değişmeyen: {{count}}",
+        "skipped": "Atlanan: {{count}}",
+        "failed": "Başarısız: {{count}}"
+      },
+      "errors": {
+        "permissionDenied": "Feishu dizini okunamıyor. Uygulamanın dizin okuma izinlerini ve görünür kapsamını kontrol edin.",
+        "configUnavailable": "Feishu yapılandırması kullanılamıyor. Giriş ayarlarını kontrol edip kaydedin.",
+        "configChanged": "Eşitleme sırasında Feishu yapılandırması değişti. Eşitlemeyi yeniden başlatın.",
+        "timeout": "Feishu dizini eşitlemesi zaman aşımına uğradı. Daha sonra tekrar deneyin.",
+        "syncFailed": "Feishu dizini eşitlenemedi. Daha sonra tekrar deneyin."
+      }
+    },
     "feishu": {
       "title": "Feishu ile giriş",
       "enabled": "Feishu ile girişi etkinleştir",
@@ -1471,7 +1496,7 @@
       "signupPolicy": "Yeni kullanıcı kaydı",
       "signupApproval": "Onay gerekli",
       "signupOpen": "Hemen izin ver",
-      "signupPolicyHint": "Onay gerekli: Feishu ile ilk kez giriş yapan kişiler, bir yönetici onları aşağıdaki kullanıcı listesinde etkinleştirdikten sonra sistemi kullanabilir. Değişiklikler yalnızca bundan sonraki ilk girişleri etkiler.",
+      "signupPolicyHint": "Bu ayar, giriş veya dizin eşitlemesiyle oluşturulan yeni Feishu hesapları için geçerlidir. Mevcut hesaplar durumlarını korur.",
       "advanced": "Gelişmiş",
       "apiBase": "Feishu API adresi",
       "accountsBase": "Feishu yetkilendirme adresi",

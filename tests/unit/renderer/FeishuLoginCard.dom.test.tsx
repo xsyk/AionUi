@@ -12,9 +12,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getFeishuLogin: vi.fn(),
   saveFeishuLogin: vi.fn(),
+  t: (key: string) => key,
 }));
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: mocks.t }) }));
 vi.mock('@/common/adapter/httpBridge', () => ({
   httpRequest: vi.fn(),
   BackendHttpError: class BackendHttpError extends Error {},
@@ -43,6 +44,7 @@ const config = {
 
 describe('FeishuLoginCard', () => {
   beforeEach(() => {
+    vi.resetAllMocks();
     // Arco's static Message renders through the legacy ReactDOM.render API, absent under React 19
     vi.spyOn(Message, 'success').mockImplementation(() => () => {});
     vi.spyOn(Message, 'error').mockImplementation(() => () => {});
@@ -61,7 +63,7 @@ describe('FeishuLoginCard', () => {
       })),
     });
   });
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('saves without expanding the advanced section', async () => {
     mocks.getFeishuLogin.mockResolvedValue(config);
@@ -84,5 +86,31 @@ describe('FeishuLoginCard', () => {
     });
     expect(payload).not.toHaveProperty('app_secret');
     expect(Message.error).not.toHaveBeenCalled();
+  });
+
+  it('shares only loaded or successfully saved configuration with the user page', async () => {
+    const onConfigChange = vi.fn();
+    const saved = { ...config, enabled: false, signup_policy: 'approval' };
+    mocks.getFeishuLogin.mockResolvedValue(config);
+    mocks.saveFeishuLogin.mockResolvedValue(saved);
+    render(<FeishuLoginCard onConfigChange={onConfigChange} />);
+    await waitFor(() => expect(onConfigChange).toHaveBeenCalledWith(config));
+
+    fireEvent.click(screen.getByTestId('feishu-enabled'));
+    expect(onConfigChange).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('feishu-save'));
+    await waitFor(() => expect(onConfigChange).toHaveBeenLastCalledWith(saved));
+  });
+
+  it('keeps the saved configuration when saving fails', async () => {
+    const onConfigChange = vi.fn();
+    mocks.getFeishuLogin.mockResolvedValue(config);
+    mocks.saveFeishuLogin.mockRejectedValue(new Error('synthetic-response'));
+    render(<FeishuLoginCard onConfigChange={onConfigChange} />);
+    await waitFor(() => expect(onConfigChange).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByTestId('feishu-save'));
+    await waitFor(() => expect(Message.error).toHaveBeenCalledWith('settings.userManagement.feishu.saveFailed'));
+    expect(onConfigChange).toHaveBeenCalledTimes(1);
   });
 });

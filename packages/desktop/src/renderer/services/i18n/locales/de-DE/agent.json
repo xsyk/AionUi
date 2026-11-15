@@ -40,6 +40,14 @@
     "busy": "Eine andere Einstellung wird gerade angewendet. Versuche es später erneut.",
     "failed": "Einstellung konnte nicht angewendet werden. Vorheriger Status wird angezeigt."
   },
+  "collaborationMode": {
+    "label": "Zusammenarbeitsmodus",
+    "plan": "Planung",
+    "default": "Standard",
+    "useCliMode": "CLI-Modus verwenden",
+    "pending": "{{current}} → {{mode}} (ab dem nächsten Zug)",
+    "switchSuccess": "Zusammenarbeitsmodus gewechselt"
+  },
   "thoughtLevel": {
     "label": "Denk-Stufe",
     "switchSuccess": "Denk-Stufe gewechselt",

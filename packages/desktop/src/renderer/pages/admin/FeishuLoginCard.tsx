@@ -25,8 +25,12 @@ function toForm(config: FeishuLoginConfig): FeishuLoginForm {
   };
 }
 
+type FeishuLoginCardProps = {
+  onConfigChange?: (config: FeishuLoginConfig) => void;
+};
+
 /** Super-admin card configuring Feishu OAuth login. */
-const FeishuLoginCard: React.FC = () => {
+const FeishuLoginCard: React.FC<FeishuLoginCardProps> = ({ onConfigChange }) => {
   const { t } = useTranslation();
   const [form] = Form.useForm<FeishuLoginForm>();
   const [config, setConfig] = useState<FeishuLoginConfig | null>(null);
@@ -36,8 +40,9 @@ const FeishuLoginCard: React.FC = () => {
     (next: FeishuLoginConfig) => {
       setConfig(next);
       form.setFieldsValue(toForm(next));
+      onConfigChange?.(next);
     },
-    [form]
+    [form, onConfigChange]
   );
 
   useEffect(() => {

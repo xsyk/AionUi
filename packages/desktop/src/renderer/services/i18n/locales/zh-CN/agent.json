@@ -40,6 +40,14 @@
     "busy": "已有设置正在应用，请稍后再试",
     "failed": "设置失败，界面已保留原状态"
   },
+  "collaborationMode": {
+    "label": "协作模式",
+    "plan": "规划",
+    "default": "默认",
+    "useCliMode": "使用 CLI 模式",
+    "pending": "{{current}} → {{mode}}（下一轮生效）",
+    "switchSuccess": "协作模式切换成功"
+  },
   "thoughtLevel": {
     "label": "思考强度",
     "switchSuccess": "思考强度切换成功",

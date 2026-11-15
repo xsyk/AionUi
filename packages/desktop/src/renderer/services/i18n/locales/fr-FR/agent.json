@@ -40,6 +40,14 @@
     "busy": "Un autre paramètre est en cours d'application. Réessayez plus tard.",
     "failed": "Échec de l'application du paramètre. L'état précédent est toujours affiché."
   },
+  "collaborationMode": {
+    "label": "Mode de collaboration",
+    "plan": "Planification",
+    "default": "Par défaut",
+    "useCliMode": "Utiliser le mode de la CLI",
+    "pending": "{{current}} → {{mode}} (au prochain tour)",
+    "switchSuccess": "Mode de collaboration modifié"
+  },
   "thoughtLevel": {
     "label": "Niveau de réflexion",
     "switchSuccess": "Niveau de réflexion changé",

@@ -1815,7 +1815,7 @@ export interface ISendMessageResult {
 export interface IAnswerAskParams {
   conversation_id: string;
   request_id: string;
-  answers?: Array<{ question: string; labels: string[] }>;
+  answers?: Array<{ question_id?: string; question: string; labels: string[] }>;
   decline?: boolean;
 }
 

@@ -25,6 +25,9 @@ type MockAcpModelInfoResult = {
   isSetting: boolean;
   selectModel: (modelId: string) => void;
   thoughtLevel: AcpDerivedOption | null;
+  collaborationMode: AcpDerivedOption | null;
+  pendingValues: Record<string, string>;
+  isConfigOptionBlocked?: (optionId: string) => boolean;
   setStatus: AcpConfigSetStatus;
   setConfigOption: (optionId: string, value: string) => Promise<unknown>;
 };
@@ -48,6 +51,16 @@ const thoughtLevel: AcpDerivedOption = {
   ],
 };
 
+const collaborationMode: AcpDerivedOption = {
+  id: 'collaboration_mode',
+  category: 'collaboration_mode',
+  currentValue: null,
+  options: [
+    { value: 'plan', label: 'Plan' },
+    { value: 'default', label: 'Default' },
+  ],
+};
+
 const makeResult = (overrides: Partial<MockAcpModelInfoResult> = {}): MockAcpModelInfoResult => ({
   model_info: modelInfo,
   isRuntimeReady: true,
@@ -56,6 +69,8 @@ const makeResult = (overrides: Partial<MockAcpModelInfoResult> = {}): MockAcpMod
   isSetting: false,
   selectModel: vi.fn(),
   thoughtLevel,
+  collaborationMode: null,
+  pendingValues: {},
   setStatus: { state: 'idle' },
   setConfigOption: vi.fn().mockResolvedValue(undefined),
   ...overrides,
@@ -185,6 +200,184 @@ describe('AcpModelSelector runtime options', () => {
     useAcpModelInfoMock.mockReturnValue(makeResult());
   });
 
+  it('shows collaboration even without thought level and leaves an unset selection unchecked', () => {
+    useAcpModelInfoMock.mockReturnValue(makeResult({ thoughtLevel: null, collaborationMode }));
+    render(<AcpModelSelector conversation_id='collaboration-menu' backend='codex' />);
+
+    expect(screen.getByText('agent.collaborationMode.label')).toBeInTheDocument();
+    expect(screen.getByText('agent.collaborationMode.plan').closest('[role="menuitem"]')).not.toHaveTextContent('✓');
+    expect(screen.getByText('agent.collaborationMode.default').closest('[role="menuitem"]')).not.toHaveTextContent('✓');
+  });
+
+  it('shows no collaboration group without a backend capability', () => {
+    render(<AcpModelSelector conversation_id='collaboration-absent' backend='codex' />);
+    expect(screen.queryByText('agent.collaborationMode.label')).not.toBeInTheDocument();
+  });
+
+  it('keeps collaboration available when the backend cannot switch models', () => {
+    useAcpModelInfoMock.mockReturnValue(
+      makeResult({
+        model_info: null,
+        canSwitch: false,
+        thoughtLevel: null,
+        collaborationMode,
+      })
+    );
+    render(<AcpModelSelector conversation_id='collaboration-only' />);
+    expect(screen.getByText('agent.collaborationMode.plan')).toBeInTheDocument();
+  });
+
+  it.each(['plan', 'default'])(
+    'selects %s through the collaboration id without changing permission mode',
+    async (value) => {
+      const setConfigOption = vi.fn().mockResolvedValue([{ id: 'custom-collaboration', current_value: value }]);
+      useAcpModelInfoMock.mockReturnValue(
+        makeResult({
+          collaborationMode: {
+            ...collaborationMode,
+            id: 'custom-collaboration',
+            currentValue: value === 'default' ? 'plan' : null,
+          },
+          setConfigOption,
+        })
+      );
+      render(<AcpModelSelector conversation_id={`collaboration-select-${value}`} />);
+      fireEvent.click(screen.getByText(`agent.collaborationMode.${value}`));
+      await waitFor(() => expect(setConfigOption).toHaveBeenCalledExactlyOnceWith('custom-collaboration', value));
+      expect(messageSuccessMock).toHaveBeenCalledWith('agent.collaborationMode.switchSuccess');
+    }
+  );
+
+  it('renders only catalog values including future modes without assuming a backend name', async () => {
+    const setConfigOption = vi.fn().mockResolvedValue([{ id: 'collaboration_mode', current_value: 'custom' }]);
+    useAcpModelInfoMock.mockReturnValue(
+      makeResult({
+        collaborationMode: {
+          ...collaborationMode,
+          options: [{ value: 'custom', label: 'Custom mode' }],
+        },
+        setConfigOption,
+      })
+    );
+    render(<AcpModelSelector conversation_id='collaboration-catalog' backend='other' />);
+    expect(screen.queryByText('agent.collaborationMode.plan')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Custom mode'));
+    await waitFor(() => expect(setConfigOption).toHaveBeenCalledWith('collaboration_mode', 'custom'));
+  });
+
+  it('does not show an empty collaboration group', () => {
+    useAcpModelInfoMock.mockReturnValue(makeResult({ collaborationMode: { ...collaborationMode, options: [] } }));
+    render(<AcpModelSelector conversation_id='collaboration-empty' />);
+    expect(screen.queryByText('agent.collaborationMode.label')).not.toBeInTheDocument();
+  });
+
+  it('keeps the confirmed collaboration selection and reports failure without a success toast', async () => {
+    const setConfigOption = vi.fn().mockRejectedValue(new Error('command_ack'));
+    useAcpModelInfoMock.mockReturnValue(
+      makeResult({
+        collaborationMode: { ...collaborationMode, currentValue: 'default' },
+        setConfigOption,
+      })
+    );
+    render(<AcpModelSelector conversation_id='collaboration-error' />);
+    fireEvent.click(screen.getByText('agent.collaborationMode.plan'));
+    await waitFor(() => expect(messageErrorMock).toHaveBeenCalledWith('agent.config.commandAck'));
+    expect(messageSuccessMock).not.toHaveBeenCalled();
+    const collaborationBody = screen.getAllByTestId('submenu-body').at(-1)!;
+    expect(
+      within(collaborationBody).getByText('agent.collaborationMode.default').closest('[role="menuitem"]')
+    ).toHaveTextContent('✓');
+  });
+
+  it('does not report a pending switch as confirmed', async () => {
+    const setConfigOption = vi.fn().mockResolvedValue([{ id: 'collaboration_mode', current_value: 'default' }]);
+    useAcpModelInfoMock.mockReturnValue(
+      makeResult({
+        collaborationMode: { ...collaborationMode, currentValue: 'default' },
+        setConfigOption,
+      })
+    );
+    render(<AcpModelSelector conversation_id='collaboration-pending' />);
+    await act(async () => {
+      fireEvent.click(screen.getByText('agent.collaborationMode.plan'));
+    });
+    expect(setConfigOption).toHaveBeenCalledExactlyOnceWith('collaboration_mode', 'plan');
+    expect(messageSuccessMock).not.toHaveBeenCalled();
+    expect(messageErrorMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the pending target without submitting it again', () => {
+    const setConfigOption = vi.fn();
+    useAcpModelInfoMock.mockReturnValue(
+      makeResult({
+        collaborationMode: { ...collaborationMode, currentValue: 'default' },
+        pendingValues: { collaboration_mode: 'plan' },
+        setConfigOption,
+      })
+    );
+    render(<AcpModelSelector conversation_id='collaboration-pending-label' />);
+    expect(screen.getByText('agent.collaborationMode.pending')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('agent.collaborationMode.plan'));
+    expect(setConfigOption).not.toHaveBeenCalled();
+  });
+
+  it('allows choosing current Default to cancel a pending Plan', async () => {
+    const setConfigOption = vi.fn().mockResolvedValue([{ id: 'collaboration_mode', current_value: 'default' }]);
+    useAcpModelInfoMock.mockReturnValue(
+      makeResult({
+        collaborationMode: { ...collaborationMode, currentValue: 'default' },
+        pendingValues: { collaboration_mode: 'plan' },
+        setConfigOption,
+      })
+    );
+    render(<AcpModelSelector conversation_id='collaboration-cancel-pending' />);
+    fireEvent.click(screen.getByText('agent.collaborationMode.default'));
+
+    await waitFor(() => expect(setConfigOption).toHaveBeenCalledExactlyOnceWith('collaboration_mode', 'default'));
+    expect(messageSuccessMock).toHaveBeenCalledWith('agent.collaborationMode.switchSuccess');
+  });
+
+  it.each(['setting', 'blocked'])('does not submit collaboration while %s', (busy) => {
+    const setConfigOption = vi.fn();
+    useAcpModelInfoMock.mockReturnValue(
+      makeResult({
+        collaborationMode,
+        setConfigOption,
+        ...(busy === 'setting'
+          ? {
+              setStatus: {
+                state: 'setting',
+                optionId: 'model',
+                requestedValue: 'gpt-5.2-mini',
+              } as const,
+            }
+          : { isConfigOptionBlocked: (id: string) => id === 'collaboration_mode' }),
+      })
+    );
+    render(<AcpModelSelector conversation_id={`collaboration-${busy}`} />);
+    fireEvent.click(screen.getByText('agent.collaborationMode.plan'));
+    expect(setConfigOption).not.toHaveBeenCalled();
+  });
+
+  it('ignores repeated collaboration clicks before the hook reports setting', async () => {
+    let resolve!: (value: unknown) => void;
+    const setConfigOption = vi.fn(
+      () =>
+        new Promise((res) => {
+          resolve = res;
+        })
+    );
+    useAcpModelInfoMock.mockReturnValue(makeResult({ collaborationMode, setConfigOption }));
+    render(<AcpModelSelector conversation_id='collaboration-double-click' />);
+    const plan = screen.getByText('agent.collaborationMode.plan');
+    fireEvent.click(plan);
+    fireEvent.click(plan);
+    expect(setConfigOption).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolve([{ id: 'collaboration_mode', current_value: 'plan' }]);
+    });
+  });
+
   it('shows the current model and thought level in the header pill', () => {
     render(<AcpModelSelector conversation_id='conversation-1' backend='codex' />);
 
@@ -282,7 +475,11 @@ describe('AcpModelSelector runtime options', () => {
           current_model_id: 'default',
           current_model_label: 'Default',
           available_models: [
-            { id: 'default', label: 'Default', description: 'Sonnet 4.6 · Best for everyday tasks' },
+            {
+              id: 'default',
+              label: 'Default',
+              description: 'Sonnet 4.6 · Best for everyday tasks',
+            },
             { id: 'opus', label: 'Opus', description: 'Opus 4.8 · Most capable for complex work' },
           ],
         },
@@ -337,7 +534,11 @@ describe('AcpModelSelector runtime options', () => {
     useAcpModelInfoMock.mockReturnValue(
       makeResult({
         thoughtLevel: null,
-        model_info: { current_model_id: 'm-0', current_model_label: 'Model 0', available_models: manyModels },
+        model_info: {
+          current_model_id: 'm-0',
+          current_model_label: 'Model 0',
+          available_models: manyModels,
+        },
       })
     );
 
@@ -358,13 +559,19 @@ describe('AcpModelSelector runtime options', () => {
     useAcpModelInfoMock.mockReturnValue(
       makeResult({
         thoughtLevel: null,
-        model_info: { current_model_id: 'm-0', current_model_label: 'Model 0', available_models: manyModels },
+        model_info: {
+          current_model_id: 'm-0',
+          current_model_label: 'Model 0',
+          available_models: manyModels,
+        },
       })
     );
 
     render(<AcpModelSelector conversation_id='conversation-1' backend='codex' />);
 
-    fireEvent.change(screen.getByTestId('runtime-selector-model-search'), { target: { value: 'zzz' } });
+    fireEvent.change(screen.getByTestId('runtime-selector-model-search'), {
+      target: { value: 'zzz' },
+    });
 
     expect(screen.getByText('No matching models')).toBeInTheDocument();
   });

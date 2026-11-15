@@ -1455,6 +1455,31 @@
     "source": "Source",
     "sourcePassword": "Mot de passe",
     "sourceFeishu": "Feishu",
+    "feishuDirectory": {
+      "start": "Synchroniser l’annuaire Feishu",
+      "starting": "Démarrage de la synchronisation…",
+      "running": "Synchronisation de l’annuaire Feishu…",
+      "completed": "Synchronisation de l’annuaire Feishu terminée",
+      "partial": "Synchronisation de l’annuaire Feishu partiellement terminée",
+      "failed": "Échec de la synchronisation de l’annuaire Feishu",
+      "description": "Synchronise tous les membres de l’annuaire visibles par cette application Feishu. Les nouveaux comptes suivent le réglage d’inscription : en attente si une approbation est requise, actifs si l’accès immédiat est autorisé. Les comptes existants conservent leur statut.",
+      "configRequired": "Enregistrez et activez d’abord la configuration de connexion Feishu.",
+      "counts": {
+        "scanned": "Lus : {{count}}",
+        "created": "Créés : {{count}}",
+        "updated": "Mis à jour : {{count}}",
+        "unchanged": "Inchangés : {{count}}",
+        "skipped": "Ignorés : {{count}}",
+        "failed": "Échecs : {{count}}"
+      },
+      "errors": {
+        "permissionDenied": "Impossible de lire l’annuaire Feishu. Vérifiez les droits de lecture et le périmètre visible de l’application.",
+        "configUnavailable": "La configuration Feishu est indisponible. Vérifiez et enregistrez les paramètres de connexion.",
+        "configChanged": "La configuration Feishu a changé pendant la synchronisation. Relancez-la.",
+        "timeout": "La synchronisation de l’annuaire Feishu a expiré. Réessayez plus tard.",
+        "syncFailed": "La synchronisation de l’annuaire Feishu a échoué. Réessayez plus tard."
+      }
+    },
     "feishu": {
       "title": "Connexion Feishu",
       "enabled": "Activer la connexion Feishu",
@@ -1471,7 +1496,7 @@
       "signupPolicy": "Inscription des nouveaux utilisateurs",
       "signupApproval": "Approbation requise",
       "signupOpen": "Autoriser immédiatement",
-      "signupPolicyHint": "Approbation requise : les personnes qui se connectent avec Feishu pour la première fois ne peuvent utiliser le système qu'après qu'un administrateur les a activées dans la liste des utilisateurs ci-dessous. Les modifications ne concernent que les premières connexions ultérieures.",
+      "signupPolicyHint": "Ce réglage s’applique aux nouveaux comptes Feishu créés par connexion ou synchronisation de l’annuaire. Les comptes existants conservent leur statut.",
       "advanced": "Avancé",
       "apiBase": "URL de l'API Feishu",
       "accountsBase": "URL d'autorisation Feishu",

@@ -88,7 +88,7 @@ export function getBuiltinSettingsNavItems(isDesktop: boolean, t: TranslateFn, i
     },
   };
 
-  const items = BUILTIN_TAB_IDS.map((id) => builtinMap[id]);
+  const items = BUILTIN_TAB_IDS.filter((id) => isSuperAdmin || id !== 'webui').map((id) => builtinMap[id]);
   if (!isSuperAdmin) return items;
   return insertBeforeWebui(items, {
     id: USER_MANAGEMENT_TAB_ID,

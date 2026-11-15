@@ -1455,6 +1455,31 @@
     "source": "Source",
     "sourcePassword": "Password",
     "sourceFeishu": "Feishu",
+    "feishuDirectory": {
+      "start": "Sync Feishu directory",
+      "starting": "Starting sync…",
+      "running": "Syncing Feishu directory…",
+      "completed": "Feishu directory sync completed",
+      "partial": "Feishu directory sync partially completed",
+      "failed": "Feishu directory sync failed",
+      "description": "Sync all directory members visible to this Feishu app. New accounts follow the new user sign-up setting: require approval creates pending accounts; allow immediately creates active accounts. Existing accounts keep their status.",
+      "configRequired": "Save and enable the Feishu login configuration first.",
+      "counts": {
+        "scanned": "Read: {{count}}",
+        "created": "Created: {{count}}",
+        "updated": "Updated: {{count}}",
+        "unchanged": "Unchanged: {{count}}",
+        "skipped": "Skipped: {{count}}",
+        "failed": "Failed: {{count}}"
+      },
+      "errors": {
+        "permissionDenied": "Unable to read the Feishu directory. Check the app's directory read permissions and visible scope.",
+        "configUnavailable": "Feishu configuration is unavailable. Check and save the Feishu login settings.",
+        "configChanged": "Feishu configuration changed during sync. Start the sync again.",
+        "timeout": "Feishu directory sync timed out. Try again later.",
+        "syncFailed": "Feishu directory sync failed. Try again later."
+      }
+    },
     "feishu": {
       "title": "Feishu login",
       "enabled": "Enable Feishu login",
@@ -1471,7 +1496,7 @@
       "signupPolicy": "New user sign-up",
       "signupApproval": "Require approval",
       "signupOpen": "Allow immediately",
-      "signupPolicyHint": "Require approval: people who sign in with Feishu for the first time can use the system only after an administrator enables them in the user list below. Changes only affect people who sign in for the first time afterwards.",
+      "signupPolicyHint": "This setting applies to new Feishu accounts created by login or directory sync. Existing accounts keep their status.",
       "advanced": "Advanced",
       "apiBase": "Feishu API URL",
       "accountsBase": "Feishu authorization URL",

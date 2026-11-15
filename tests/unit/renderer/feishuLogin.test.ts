@@ -46,6 +46,19 @@ describe('feishuLogin helpers', () => {
     );
   });
 
+  it('ignores the legacy H5 app ID returned by an older backend', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          data: { enabled: true, public_base_url: 'https://a.example.com', app_id: 'cli-legacy' },
+        }),
+      }))
+    );
+    await expect(fetchFeishuLoginStatus()).resolves.toEqual({ enabled: true, publicBaseUrl: 'https://a.example.com' });
+  });
+
   it('treats disabled and failures as disabled', async () => {
     const disabled = { enabled: false, publicBaseUrl: null };
     vi.stubGlobal(

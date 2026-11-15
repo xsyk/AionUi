@@ -303,6 +303,7 @@ export type IMessageAcpPermission = IMessage<'acp_permission', AcpPermissionRequ
 /** One structured question inside an `ask` frame (claude AskUserQuestion shape;
  *  qwen/grok converged on the same layout — cross-vendor contract). */
 export interface IAskQuestion {
+  id?: string;
   question: string;
   header?: string;
   /** The ws relay snake_cases every key (normalize_keys_to_snake_case), so the

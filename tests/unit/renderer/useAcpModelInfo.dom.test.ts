@@ -62,6 +62,28 @@ const buildConfigOptions = (currentModelId = 'sonnet-4'): AcpConfigOptionDto[] =
   },
 ];
 
+// Config projection of the CLI 0.161.0 Plan/Default catalog, independent of permissions.
+const buildCollaborationOptions = (currentValue: string | null = null): AcpConfigOptionDto[] => [
+  ...buildConfigOptions(),
+  {
+    id: 'mode',
+    category: 'mode',
+    type: 'select',
+    current_value: 'read-only',
+    options: [{ value: 'read-only', name: 'Read only' }],
+  },
+  {
+    id: 'collaboration_mode',
+    category: 'collaboration_mode',
+    type: 'select',
+    current_value: currentValue,
+    options: [
+      { value: 'plan', name: 'Plan' },
+      { value: 'default', name: 'Default' },
+    ],
+  },
+];
+
 const buildLegacyModelInfo = (overrides: Partial<AcpModelInfo> = {}): AcpModelInfo => ({
   current_model_id: 'sonnet-4',
   current_model_label: 'Claude Sonnet 4',
@@ -117,11 +139,186 @@ describe('useAcpModelInfo', () => {
     resetEnsureConversationRuntimeStateForTests();
     ensureRuntimeInvokeMock.mockReset();
     setConfigOptionInvokeMock.mockReset();
-    ensureRuntimeInvokeMock.mockResolvedValue({ recovered: true, config_options: buildConfigOptions(), runtime: null });
+    ensureRuntimeInvokeMock.mockResolvedValue({
+      recovered: true,
+      config_options: buildConfigOptions(),
+      runtime: null,
+    });
     setConfigOptionInvokeMock.mockResolvedValue({
       confirmation: 'observed',
       config_options: buildConfigOptions('opus-4'),
     });
+  });
+
+  it.each(['category', 'id'])(
+    'derives collaboration independently by %s and preserves an unset selection',
+    async (axis) => {
+      const options = buildCollaborationOptions();
+      const collaboration = options[options.length - 1];
+      if (axis === 'category') collaboration.id = 'codex-collaboration';
+      else collaboration.category = undefined;
+      const load = vi.fn().mockResolvedValue(options);
+      const { result } = renderUseAcpModelInfo({
+        conversation_id: `collaboration-${axis}`,
+        configOptionsPort: { load },
+      });
+
+      await waitFor(() => expect(result.current.isRuntimeReady).toBe(true));
+      expect(result.current.collaborationMode).toEqual({
+        id: collaboration.id,
+        category: 'collaboration_mode',
+        currentValue: null,
+        options: [
+          { value: 'plan', label: 'Plan' },
+          { value: 'default', label: 'Default' },
+        ],
+      });
+    }
+  );
+
+  it('does not invent collaboration capability for a backend without a catalog', async () => {
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'collaboration-absent',
+      backend: 'codex',
+    });
+    await waitFor(() => expect(result.current.isRuntimeReady).toBe(true));
+    expect(result.current.collaborationMode).toBeNull();
+  });
+
+  it('sets Plan through its actual config id and keeps the other three axes', async () => {
+    const options = buildCollaborationOptions();
+    options[options.length - 1].id = 'codex-collaboration';
+    const confirmed = options.map((option) =>
+      option.category === 'collaboration_mode' ? { ...option, current_value: 'plan' } : option
+    );
+    const load = vi.fn().mockResolvedValue(options);
+    setConfigOptionInvokeMock.mockResolvedValue({
+      confirmation: 'observed',
+      config_options: confirmed,
+    });
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'collaboration-observed',
+      configOptionsPort: { load },
+    });
+    await waitFor(() => expect(result.current.collaborationMode?.id).toBe('codex-collaboration'));
+
+    await act(async () => {
+      await result.current.setConfigOption(result.current.collaborationMode!.id, 'plan');
+    });
+
+    expect(setConfigOptionInvokeMock).toHaveBeenCalledExactlyOnceWith({
+      conversation_id: 'collaboration-observed',
+      option_id: 'codex-collaboration',
+      value: 'plan',
+    });
+    expect(result.current.collaborationMode?.currentValue).toBe('plan');
+    expect(result.current.model_info?.current_model_id).toBe('sonnet-4');
+    expect(result.current.thoughtLevel?.currentValue).toBe('medium');
+  });
+
+  it.each(['command_ack', 'observed', 'rejected'])(
+    'keeps confirmed collaboration when a switch is %s without observation',
+    async (confirmation) => {
+      const options = buildCollaborationOptions('default');
+      const load = vi.fn().mockResolvedValue(options);
+      if (confirmation === 'rejected') setConfigOptionInvokeMock.mockRejectedValue(new Error('busy'));
+      else setConfigOptionInvokeMock.mockResolvedValue({ confirmation, config_options: options });
+      const { result } = renderUseAcpModelInfo({
+        conversation_id: `collaboration-failed-${confirmation}`,
+        configOptionsPort: { load },
+      });
+      await waitFor(() => expect(result.current.collaborationMode?.currentValue).toBe('default'));
+
+      await act(async () => {
+        await expect(result.current.setConfigOption('collaboration_mode', 'plan')).rejects.toThrow();
+      });
+
+      expect(result.current.collaborationMode?.currentValue).toBe('default');
+      expect(result.current.setStatus.state).toBe('idle');
+      expect(result.current.model_info?.current_model_id).toBe('sonnet-4');
+    }
+  );
+
+  it('keeps pending collaboration separate until the full observed stream snapshot arrives', async () => {
+    const options = buildCollaborationOptions('default');
+    const load = vi.fn().mockResolvedValue(options);
+    setConfigOptionInvokeMock.mockResolvedValue({
+      confirmation: 'pending_next_turn',
+      config_options: options,
+    });
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'collaboration-pending',
+      configOptionsPort: { load },
+    });
+    await waitFor(() => expect(result.current.collaborationMode?.currentValue).toBe('default'));
+    await act(async () => {
+      await result.current.setConfigOption('collaboration_mode', 'plan');
+    });
+
+    expect(result.current.collaborationMode?.currentValue).toBe('default');
+    expect(result.current.pendingValues).toEqual({ collaboration_mode: 'plan' });
+
+    act(() =>
+      emitStream({
+        type: 'acp_config_option',
+        conversation_id: 'collaboration-pending',
+        data: { config_options: buildCollaborationOptions('plan') },
+      } as unknown as IResponseMessage)
+    );
+    await waitFor(() => expect(result.current.collaborationMode?.currentValue).toBe('plan'));
+    expect(result.current.pendingValues).toEqual({});
+  });
+
+  it('clears a superseded pending Plan after Default is observed without clearing pending effort', async () => {
+    const options = buildCollaborationOptions('default');
+    const load = vi.fn().mockResolvedValue(options);
+    setConfigOptionInvokeMock
+      .mockResolvedValueOnce({ confirmation: 'pending_next_turn', config_options: options })
+      .mockResolvedValueOnce({ confirmation: 'pending_next_turn', config_options: options })
+      .mockResolvedValueOnce({ confirmation: 'observed', config_options: options });
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'collaboration-cancel-pending',
+      configOptionsPort: { load },
+    });
+    await waitFor(() => expect(result.current.collaborationMode?.currentValue).toBe('default'));
+    await act(async () => {
+      await result.current.setConfigOption('thought_level', 'low');
+      await result.current.setConfigOption('collaboration_mode', 'plan');
+      await result.current.setConfigOption('collaboration_mode', 'default');
+    });
+
+    expect(result.current.pendingValues).toEqual({ thought_level: 'low' });
+    expect(result.current.collaborationMode?.currentValue).toBe('default');
+    expect(result.current.thoughtLevel?.currentValue).toBe('medium');
+  });
+
+  it('rejects a repeated collaboration update while its first request is in flight', async () => {
+    const request = deferred<{ confirmation: 'observed'; config_options: AcpConfigOptionDto[] }>();
+    const load = vi.fn().mockResolvedValue(buildCollaborationOptions('default'));
+    setConfigOptionInvokeMock.mockReturnValue(request.promise);
+    const { result } = renderUseAcpModelInfo({
+      conversation_id: 'collaboration-busy',
+      configOptionsPort: { load },
+    });
+    await waitFor(() => expect(result.current.collaborationMode?.currentValue).toBe('default'));
+    let first!: Promise<AcpConfigOptionDto[]>;
+    act(() => {
+      first = result.current.setConfigOption('collaboration_mode', 'plan');
+    });
+    await act(async () => {
+      await expect(result.current.setConfigOption('collaboration_mode', 'plan')).rejects.toThrow(
+        'config_update_in_progress'
+      );
+    });
+    await waitFor(() => expect(setConfigOptionInvokeMock).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      request.resolve({
+        confirmation: 'observed',
+        config_options: buildCollaborationOptions('plan'),
+      });
+      await first;
+    });
+    expect(result.current.collaborationMode?.currentValue).toBe('plan');
   });
 
   it('derives model info from the model config option and ignores thought_level values', async () => {
@@ -475,11 +672,21 @@ describe('useAcpModelInfo', () => {
   it('shares observed model snapshots across hook instances for the same conversation', async () => {
     const wrapper = createSwrWrapper();
     const first = renderHook(
-      () => useAcpModelInfo({ conversation_id: 'conv-1', backend: 'claude', initialModelId: 'sonnet-4' }),
+      () =>
+        useAcpModelInfo({
+          conversation_id: 'conv-1',
+          backend: 'claude',
+          initialModelId: 'sonnet-4',
+        }),
       { wrapper }
     );
     const second = renderHook(
-      () => useAcpModelInfo({ conversation_id: 'conv-1', backend: 'claude', initialModelId: 'sonnet-4' }),
+      () =>
+        useAcpModelInfo({
+          conversation_id: 'conv-1',
+          backend: 'claude',
+          initialModelId: 'sonnet-4',
+        }),
       { wrapper }
     );
 
@@ -508,11 +715,21 @@ describe('useAcpModelInfo', () => {
 
     const wrapper = createSwrWrapper();
     const first = renderHook(
-      () => useAcpModelInfo({ conversation_id: 'conv-1', backend: 'claude', initialModelId: 'sonnet-4' }),
+      () =>
+        useAcpModelInfo({
+          conversation_id: 'conv-1',
+          backend: 'claude',
+          initialModelId: 'sonnet-4',
+        }),
       { wrapper }
     );
     const second = renderHook(
-      () => useAcpModelInfo({ conversation_id: 'conv-1', backend: 'claude', initialModelId: 'sonnet-4' }),
+      () =>
+        useAcpModelInfo({
+          conversation_id: 'conv-1',
+          backend: 'claude',
+          initialModelId: 'sonnet-4',
+        }),
       { wrapper }
     );
 
@@ -521,7 +738,11 @@ describe('useAcpModelInfo', () => {
     });
 
     await act(async () => {
-      ensureDeferred.resolve({ recovered: true, config_options: buildConfigOptions(), runtime: null });
+      ensureDeferred.resolve({
+        recovered: true,
+        config_options: buildConfigOptions(),
+        runtime: null,
+      });
       await ensureDeferred.promise;
     });
 
@@ -533,7 +754,11 @@ describe('useAcpModelInfo', () => {
   });
 
   it('uses legacy acp_model_info stream only before config options are available', async () => {
-    ensureRuntimeInvokeMock.mockResolvedValue({ recovered: true, config_options: [], runtime: null });
+    ensureRuntimeInvokeMock.mockResolvedValue({
+      recovered: true,
+      config_options: [],
+      runtime: null,
+    });
 
     const { result } = renderUseAcpModelInfo({
       conversation_id: 'conv-1',

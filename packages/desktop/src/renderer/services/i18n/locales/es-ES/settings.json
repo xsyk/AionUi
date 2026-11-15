@@ -1455,6 +1455,31 @@
     "source": "Origen",
     "sourcePassword": "Contraseña",
     "sourceFeishu": "Feishu",
+    "feishuDirectory": {
+      "start": "Sincronizar directorio de Feishu",
+      "starting": "Iniciando sincronización…",
+      "running": "Sincronizando directorio de Feishu…",
+      "completed": "Sincronización del directorio de Feishu completada",
+      "partial": "Sincronización del directorio de Feishu parcialmente completada",
+      "failed": "Error al sincronizar el directorio de Feishu",
+      "description": "Sincroniza todos los miembros del directorio visibles para esta aplicación de Feishu. Las cuentas nuevas siguen el ajuste de registro: si se requiere aprobación, quedan pendientes; si se permite el acceso inmediato, quedan activas. Las cuentas existentes conservan su estado.",
+      "configRequired": "Guarda y activa primero la configuración de inicio de sesión de Feishu.",
+      "counts": {
+        "scanned": "Leídos: {{count}}",
+        "created": "Creados: {{count}}",
+        "updated": "Actualizados: {{count}}",
+        "unchanged": "Sin cambios: {{count}}",
+        "skipped": "Omitidos: {{count}}",
+        "failed": "Fallidos: {{count}}"
+      },
+      "errors": {
+        "permissionDenied": "No se puede leer el directorio de Feishu. Comprueba los permisos de lectura y el alcance visible de la aplicación.",
+        "configUnavailable": "La configuración de Feishu no está disponible. Revisa y guarda los ajustes de inicio de sesión.",
+        "configChanged": "La configuración de Feishu cambió durante la sincronización. Iníciala de nuevo.",
+        "timeout": "Se agotó el tiempo de sincronización del directorio de Feishu. Inténtalo más tarde.",
+        "syncFailed": "No se pudo sincronizar el directorio de Feishu. Inténtalo más tarde."
+      }
+    },
     "feishu": {
       "title": "Inicio de sesión con Feishu",
       "enabled": "Activar inicio de sesión con Feishu",
@@ -1471,7 +1496,7 @@
       "signupPolicy": "Registro de nuevos usuarios",
       "signupApproval": "Requiere aprobación",
       "signupOpen": "Permitir de inmediato",
-      "signupPolicyHint": "Requiere aprobación: quienes inicien sesión con Feishu por primera vez solo podrán usar el sistema después de que un administrador los habilite en la lista de usuarios de abajo. Los cambios solo afectan a quienes inicien sesión por primera vez a partir de ahora.",
+      "signupPolicyHint": "Este ajuste se aplica a las cuentas nuevas de Feishu creadas al iniciar sesión o sincronizar el directorio. Las cuentas existentes conservan su estado.",
       "advanced": "Avanzado",
       "apiBase": "URL de la API de Feishu",
       "accountsBase": "URL de autorización de Feishu",

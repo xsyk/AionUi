@@ -1456,6 +1456,31 @@
     "source": "来源",
     "sourcePassword": "密码",
     "sourceFeishu": "飞书",
+    "feishuDirectory": {
+      "start": "同步飞书通讯录",
+      "starting": "正在启动同步…",
+      "running": "正在同步飞书通讯录…",
+      "completed": "飞书通讯录同步完成",
+      "partial": "飞书通讯录同步部分完成",
+      "failed": "飞书通讯录同步失败",
+      "description": "同步飞书应用当前可见的全部通讯录成员。新账号遵循现有新用户注册方式：先审批时为待审批，直接可用时为启用；已有账号保留当前状态。",
+      "configRequired": "请先保存并启用飞书登录配置。",
+      "counts": {
+        "scanned": "读取：{{count}}",
+        "created": "新增：{{count}}",
+        "updated": "更新：{{count}}",
+        "unchanged": "未变：{{count}}",
+        "skipped": "跳过：{{count}}",
+        "failed": "失败：{{count}}"
+      },
+      "errors": {
+        "permissionDenied": "无法读取飞书通讯录，请检查应用的通讯录读取权限及可见范围。",
+        "configUnavailable": "飞书配置不可用，请检查并保存飞书登录配置。",
+        "configChanged": "同步期间飞书配置发生变化，请重新同步。",
+        "timeout": "飞书通讯录同步超时，请稍后重试。",
+        "syncFailed": "飞书通讯录同步失败，请稍后重试。"
+      }
+    },
     "feishu": {
       "title": "飞书登录",
       "enabled": "启用飞书登录",
@@ -1472,7 +1497,7 @@
       "signupPolicy": "新用户注册方式",
       "signupApproval": "先审批",
       "signupOpen": "直接可用",
-      "signupPolicyHint": "先审批：第一次用飞书登录的人，要等管理员在下方用户列表中启用后才能使用。修改只影响之后第一次登录的人。",
+      "signupPolicyHint": "此设置适用于之后通过飞书登录或通讯录同步新建的账号，已有账号保留当前状态。",
       "advanced": "高级设置",
       "apiBase": "飞书接口地址",
       "accountsBase": "飞书授权页地址",

@@ -40,6 +40,14 @@
     "busy": "Another setting is being applied. Try again later.",
     "failed": "Failed to apply setting. The previous state is still shown."
   },
+  "collaborationMode": {
+    "label": "Collaboration mode",
+    "plan": "Plan",
+    "default": "Default",
+    "useCliMode": "Use CLI mode",
+    "pending": "{{current}} → {{mode}} (next turn)",
+    "switchSuccess": "Collaboration mode switched"
+  },
   "thoughtLevel": {
     "label": "Thinking Level",
     "switchSuccess": "Thinking level switched",

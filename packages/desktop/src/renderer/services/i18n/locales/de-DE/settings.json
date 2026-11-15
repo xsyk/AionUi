@@ -1455,6 +1455,31 @@
     "source": "Quelle",
     "sourcePassword": "Passwort",
     "sourceFeishu": "Feishu",
+    "feishuDirectory": {
+      "start": "Feishu-Verzeichnis synchronisieren",
+      "starting": "Synchronisierung wird gestartet…",
+      "running": "Feishu-Verzeichnis wird synchronisiert…",
+      "completed": "Feishu-Verzeichnis synchronisiert",
+      "partial": "Feishu-Verzeichnis teilweise synchronisiert",
+      "failed": "Synchronisierung des Feishu-Verzeichnisses fehlgeschlagen",
+      "description": "Alle für diese Feishu-App sichtbaren Verzeichnismitglieder synchronisieren. Neue Konten folgen der Registrierungseinstellung: Bei erforderlicher Freigabe warten sie auf Genehmigung, bei sofortiger Zulassung sind sie aktiv. Bestehende Konten behalten ihren Status.",
+      "configRequired": "Speichern und aktivieren Sie zuerst die Feishu-Anmeldekonfiguration.",
+      "counts": {
+        "scanned": "Gelesen: {{count}}",
+        "created": "Erstellt: {{count}}",
+        "updated": "Aktualisiert: {{count}}",
+        "unchanged": "Unverändert: {{count}}",
+        "skipped": "Übersprungen: {{count}}",
+        "failed": "Fehlgeschlagen: {{count}}"
+      },
+      "errors": {
+        "permissionDenied": "Das Feishu-Verzeichnis kann nicht gelesen werden. Prüfen Sie die Leseberechtigungen und den sichtbaren Bereich der App.",
+        "configUnavailable": "Die Feishu-Konfiguration ist nicht verfügbar. Prüfen und speichern Sie die Anmeldeeinstellungen.",
+        "configChanged": "Die Feishu-Konfiguration wurde während der Synchronisierung geändert. Starten Sie erneut.",
+        "timeout": "Zeitüberschreitung bei der Feishu-Verzeichnissynchronisierung. Versuchen Sie es später erneut.",
+        "syncFailed": "Die Feishu-Verzeichnissynchronisierung ist fehlgeschlagen. Versuchen Sie es später erneut."
+      }
+    },
     "feishu": {
       "title": "Feishu-Anmeldung",
       "enabled": "Feishu-Anmeldung aktivieren",
@@ -1471,7 +1496,7 @@
       "signupPolicy": "Registrierung neuer Benutzer",
       "signupApproval": "Freigabe erforderlich",
       "signupOpen": "Sofort zulassen",
-      "signupPolicyHint": "Freigabe erforderlich: Wer sich zum ersten Mal mit Feishu anmeldet, kann das System erst nutzen, nachdem ein Administrator das Konto in der Benutzerliste unten aktiviert hat. Änderungen gelten nur für spätere Erstanmeldungen.",
+      "signupPolicyHint": "Diese Einstellung gilt für neue Feishu-Konten, die durch Anmeldung oder Verzeichnissynchronisierung erstellt werden. Bestehende Konten behalten ihren Status.",
       "advanced": "Erweitert",
       "apiBase": "Feishu-API-URL",
       "accountsBase": "Feishu-Autorisierungs-URL",
