@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.3 (2026-11-15)
+
+### 服务器 Web
+
+- 支持匿名只读分享及飞书会话接入。
+- 飞书登录统一使用普通浏览器 OAuth 流程，移除已取消的 H5 端内免登录路径。
+- 原生问答保留独立问题编号，提交等待后端确认，失败时保留草稿；协作模式与权限模式分别设置。
+- 管理员可同步全部可见飞书通讯录成员，独立展示姓名并保留登录名和原账号状态。
+- 飞书入站支持图片和富文本，资源下载按投递归属授权并限制大小与时长；发信人优先展示姓名。
+- “远程连接”入口及页面仅向超级管理员开放。
+- 管理员可按会话所有人读取、分页及批量删除明确选中的归档，部分失败可重试，其他归档与活跃会话保留。
+- 删除会话时在同一事务中清理对应 ACP 状态。
+
+本版本安装包使用配套的自编 AionCore 和飞书路由实现。产品版本为 1.0.3，内部组件版本独立维护。
+
 ## [1.0.2](https://github.com/xsyk/AionUi/releases/tag/v1.0.2) (2026-10-31)
 
 Files can now be uploaded straight into a folder of the workspace tree, and the server folder picker always opens on top of the dialog that called it.
